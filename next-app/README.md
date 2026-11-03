@@ -271,3 +271,7 @@ Honest limitations (NOT claimed):
 - No deployment was done. No third-party calling dependency or API
   key was added (socket.io/socket.io-client are our own signalling
   transport, not a calling service).
+
+## Deploy trigger
+Vercel auto-deploy check — 2026-11-03: this commit exists only to
+trigger a fresh Vercel deployment from main after the system-font fix.
