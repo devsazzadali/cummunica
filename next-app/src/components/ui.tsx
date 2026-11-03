@@ -33,9 +33,9 @@ export function SearchBar({placeholder,href}:{placeholder:string;href?:string}){
 export function TwoPane({list,detail,listHideMobile}:{list:ReactNode;detail:ReactNode;listHideMobile?:boolean}){
   return <div className="two-pane"><aside className={listHideMobile?"pane-list pane-list-hide-mobile":"pane-list"}>{list}</aside><section className="pane-detail">{detail}</section></div>;
 }
-export function AppShell({active,title,children,back}:{active:string;title?:string;children:ReactNode;back?:string}){
+export function AppShell({active,title,children,back,hideHeader}:{active:string;title?:string;children:ReactNode;back?:string;hideHeader?:boolean}){
   return <div className="app-shell">
-    <header className="app-header"><Link className="brand" href="/chats">Communica</Link><DesktopTabs active={active}/>{title?<span className="app-title">{title}</span>:null}</header>
+    <header className={hideHeader?"app-header app-header-hide-mobile":"app-header"}><Link className="brand" href="/chats">Communica</Link><DesktopTabs active={active}/>{title?<span className="app-title">{title}</span>:null}</header>
     <main className="app-main">{children}</main>
     <BottomNav active={active}/>
   </div>;

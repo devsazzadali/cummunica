@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bot } from "lucide-react";
+import { ArrowLeft, Bot, Hash, Users } from "lucide-react";
 import { Avatar as Av, AppShell } from "@/components/ui";
 import { apiJson, getToken } from "@/lib/api-client";
 type LiveUser={username:string;displayName:string;communicaId:string;avatarUrl:string|null;bio:string|null};
@@ -23,8 +23,10 @@ export default function NewChatPage(){
  const query=q.trim(); const isId=/^\d+$/.test(query);
  const startChat=async(u:LiveUser)=>{ setError(""); setNotice(""); try{ const d=await apiJson("/api/chats",{method:"POST",body:{type:"DIRECT",otherIdentifier:u.username}}) as {chat:{id:string;type:string}}; router.push(d.chat.type==="GROUP"?`/groups/${d.chat.id}`:`/chats/${d.chat.id}`); }catch(err){ setError(err instanceof Error?err.message:"could not start chat"); } };
  const addContact=async(u:LiveUser)=>{ setError(""); setNotice(""); try{ await apiJson("/api/contacts",{method:"POST",body:{identifier:u.username}}); setNotice("Contact request sent — the other user must accept it before calls are allowed."); }catch(err){ setError(err instanceof Error?err.message:"could not add contact"); } };
- return <AppShell active="Chats"><main><header className="topbar"><Link className="icon-btn" href="/chats" aria-label="Back"><ArrowLeft size={22}/></Link><h1>New Chat / Search</h1></header>
- <div className="wrap"><p>Find people by <strong>exact 8-digit Communica ID</strong> (partial ID search is NOT supported) OR by @username (exact or prefix).</p>
+ return <AppShell active="Chats" hideHeader><main><header className="topbar"><Link className="icon-btn" href="/chats" aria-label="Back"><ArrowLeft size={22}/></Link><h1>New Chat / Search</h1></header>
+ <div className="wrap">
+  <div className="chat-list"><Link className="chat-row" href="/new-group"><span className="chat-row-main"><strong>New Group</strong><span className="chat-preview">Create a group chat</span></span><Users size={22}/></Link><Link className="chat-row" href="/keypad"><span className="chat-row-main"><strong>Keypad</strong><span className="chat-preview">Dial by Communica ID</span></span><Hash size={22}/></Link></div>
+  <p>Find people by <strong>exact 8-digit Communica ID</strong> (partial ID search is NOT supported) OR by @username (exact or prefix).</p>
   <label htmlFor="people-search">Type 8-digit ID or @username…</label><input id="people-search" value={q} onChange={e=>setQ(e.target.value)} placeholder="Type 8-digit ID or @username…"/>
   {isId&&query.length!==8?<p>Communica IDs are exactly 8 digits.</p>:null}
   {!loggedIn?<p>Live search needs login. <Link href="/login">Login</Link> — no demo people are shown, so nothing here can be mistaken for a real account.</p>:null}

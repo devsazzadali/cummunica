@@ -223,3 +223,16 @@ h1{font-size:var(--t-h1-size);font-weight:var(--t-h1-weight);letter-spacing:var(
 .theme-swatches{display:flex;gap:4px;flex-shrink:0}
 .theme-swatches i{display:block;width:26px;height:26px;border-radius:50%;border:1px solid var(--t-border)}
 .theme-swatches i:nth-child(2){border-radius:8px}
+
+/* Chats mobile-app rebuild (2026-11-03): history-only home, real search on top,
+   FABs in the thumb zone at bottom-right, no duplicated brand header on mobile. */
+.chat-search-bar input{border:0;min-height:36px;padding:0;background:transparent;flex:1}
+.chat-search-bar input:focus{outline:0;border:0}
+.fab-stack{display:none}
+@media(max-width:767px){
+ .app-header-hide-mobile{display:none}
+ .fab-stack{display:flex;flex-direction:column;gap:12px;position:fixed;right:16px;bottom:calc(60px + env(safe-area-inset-bottom,0px) + 16px);z-index:60}
+ .fab{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;background:var(--t-btn-bg);color:var(--t-btn-text);box-shadow:var(--t-card-shadow)}
+ .fab:hover{text-decoration:none;opacity:.92}
+ .fab-secondary{background:var(--t-surface);color:var(--t-icon);border:1px solid var(--t-border)}
+}

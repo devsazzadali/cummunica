@@ -12,7 +12,7 @@ function meUsername(): string {
   try { const u = JSON.parse(localStorage.getItem("communica_user") ?? "{}"); return u.username ?? ""; } catch { return ""; }
 }
 
-export function RealChatList({ filter, archived, activeId }: { filter?: "all" | "unread" | "favorites" | "groups"; archived?: boolean; activeId?: string }) {
+export function RealChatList({ filter, archived, activeId, q }: { filter?: "all" | "unread" | "favorites" | "groups"; archived?: boolean; activeId?: string; q?: string }) {
   const [chats, setChats] = useState<ChatItem[] | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -30,7 +30,15 @@ export function RealChatList({ filter, archived, activeId }: { filter?: "all" | 
   if (chats === null) return <p className="empty">Loading chats…</p>;
   if (!chats.length) return <p className="empty">No chats here yet. Search for someone to start a real chat.</p>;
   const me = meUsername();
-  return <div className="chat-list">{chats.map((c) => {
+  const query = (q ?? "").trim().toLowerCase();
+  const visible = query ? chats.filter((c) => {
+    const name = chatTitle(c, me).toLowerCase();
+    const preview = (c.lastMessage?.text ?? "").toLowerCase();
+    const members = c.members.map((m) => `${m.displayName} ${m.username}`.toLowerCase()).join(" ");
+    return name.includes(query) || preview.includes(query) || members.includes(query);
+  }) : chats;
+  if (!visible.length) return <p className="empty">No chats match “{q}”.</p>;
+  return <div className="chat-list">{visible.map((c) => {
     const href = c.chat.type === "GROUP" ? `/groups/${c.chat.id}` : `/chats/${c.chat.id}`;
     const name = chatTitle(c, me);
     return <div key={c.chat.id} className={activeId === c.chat.id ? "chat-row-wrap chat-row-active" : "chat-row-wrap"}>
