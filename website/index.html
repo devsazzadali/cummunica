@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Communica — Social Communication | UI Prototype</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#d9dbd5;font-family:"Noto Sans Bengali","Hind Siliguri","SolaimanLipi",system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Arial,sans-serif;color:#111}
+.phone{max-width:480px;margin:0 auto;background:#fff;min-height:100vh;position:relative;padding-bottom:70px;box-shadow:0 0 20px rgba(0,0,0,.15)}
+.screen{display:none;padding:0 0 16px}
+.screen.active{display:block}
+.top{background:#075E54;color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px}
+.top h1,.top h2{margin:0;font-size:19px;flex:1}
+.top h2{font-size:18px}
+button{cursor:pointer;border:0;border-radius:20px;padding:10px 16px;font-size:15px;min-height:44px}
+.btn-green{background:#0B6E60;color:#fff}
+.btn-bright{background:#25D366;color:#06332B;font-weight:700}
+.btn-light{background:#e9edef;color:#111}
+.btn-danger{background:#d32f2f;color:#fff}
+.back{background:transparent;color:#fff;font-size:22px;padding:4px 8px}
+.iconbtn{background:#e9edef;color:#111;border-radius:50%;width:44px;height:44px;padding:0;font-size:18px}
+.wrap{padding:16px}
+input,select,textarea{width:100%;padding:12px;border:1px solid #ccc;border-radius:10px;font-size:16px;margin:6px 0 12px;font-family:inherit}
+label{font-weight:600;font-size:14px}
+.disclaimer{background:#fff3cd;border:1px solid #f0c36d;color:#5a4300;padding:10px 12px;border-radius:10px;font-size:13px;margin:16px}
+.footer-note{font-size:12px;color:#667781;text-align:center;padding:10px}
+.logo{font-size:42px;font-weight:800;color:#075E54}
+.tagline{color:#0B6E60;font-weight:700}
+.tabs{display:flex;gap:8px;padding:12px 16px;flex-wrap:wrap}
+.tabs button{background:#e9edef;color:#111}
+.tabs button.on{background:#0B6E60;color:#fff}
+.chatrow{display:flex;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid #eee;width:100%;background:#fff;text-align:left;border-radius:0}
+.avatar{width:48px;height:48px;border-radius:50%;background:#0B6E60;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0}
+.avatar.green{background:#25D366}.avatar.dark{background:#075E54}.avatar.ai{background:#6a1b9a}
+.chatrow b{display:block}.chatrow small{color:#667781}
+.badge{background:#075E54;color:#fff;border-radius:12px;padding:2px 8px;font-size:12px;margin-left:auto}
+.chatbg{background:#ECE5DD;padding:14px;min-height:340px}
+.bubble{max-width:82%;padding:9px 12px;border-radius:12px;margin:8px 0;background:#fff;box-shadow:0 1px 1px rgba(0,0,0,.15);overflow-wrap:break-word}
+.chatrow>span:nth-child(2){min-width:0;overflow-wrap:break-word}
+.chatrow small{overflow-wrap:break-word}
+.bubble.me{margin-left:auto;background:#d9fdd3}
+.bubble small{color:#667781;font-size:12px}
+.react{font-size:13px;background:#f0f2f5;border-radius:12px;padding:4px 8px;min-height:44px;margin-top:4px}
+.composer{display:flex;gap:8px;padding:10px;background:#f0f2f5;position:sticky;bottom:0}
+.composer input{margin:0;flex:1}
+.chip{display:inline-block;background:#e9edef;border-radius:20px;padding:8px 14px;margin:4px;cursor:pointer;border:2px solid transparent;min-height:44px}
+.chip.on{background:#d9fdd3;border-color:#25D366}
+.bottomnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid #ddd;display:flex;z-index:10}
+.bottomnav button{flex:1;background:#fff;color:#667781;border-radius:0;font-size:13px;padding:10px 2px}
+.bottomnav button.on{color:#0B6E60;font-weight:700}
+.bottomnav.hidden{display:none}
+.callbox{text-align:center;padding:30px 16px}
+.callavatar{width:130px;height:130px;border-radius:50%;background:#075E54;color:#fff;font-size:52px;display:flex;align-items:center;justify-content:center;margin:10px auto}
+.callbtns{display:flex;justify-content:center;gap:14px;margin-top:22px;flex-wrap:wrap}
+.callbtns button{width:60px;height:60px;border-radius:50%;font-size:20px}
+.callbtns button.end{background:#e53935;color:#fff;width:68px;height:68px}
+.callbtns button.on{background:#25D366;color:#fff}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:300px;margin:16px auto}
+.keypad button{background:#f0f2f5;font-size:20px;height:56px;border-radius:12px}
+.statuscard{border:1px solid #ddd;border-radius:12px;padding:12px;margin:10px 16px}
+.toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:#111;color:#fff;padding:12px 18px;border-radius:20px;z-index:50;display:none;max-width:90%;text-align:center}
+.photo-demo{height:110px;background:linear-gradient(135deg,#0B6E60,#25D366);color:#fff;display:flex;align-items:center;justify-content:center;border-radius:10px;font-weight:700}
+a{color:#0B6E60}
+</style>
+</head>
+<body>
+<div class="phone" id="app">
+
+<!-- LANDING / HOME -->
+<section class="screen active" id="screen-landing">
+<div class="top"><h1>Communica</h1></div>
+<div class="wrap" style="text-align:center">
+<p class="logo">💬 Communica</p>
+<p class="tagline">Social Communication</p>
+<p>Chat, groups, status, communities and in-app calls — without sharing a real phone number. You get a random 8-digit Communica ID + a unique @username.</p>
+<p>Inside Communica there is one AI chatbot contact: <b>SAZMU AI</b> — always labelled AI, never a real human.</p>
+<button class="btn-bright" style="width:100%" onclick="showScreen('screen-register')">Register — get started</button><br><br>
+<button class="btn-green" style="width:100%" onclick="showScreen('screen-login')">Login</button><br><br>
+<button class="btn-light" style="width:100%" onclick="demoEnter()">Browse demo chats (demo only)</button>
+<p style="font-size:14px">Backend (for labels only, not wired here): Prisma + Neon DB only — NOT Supabase. Auth: JWT + bcrypt (later phase).</p>
+</div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- REGISTER -->
+<section class="screen" id="screen-register">
+<div class="top"><button class="back" onclick="showScreen('screen-landing')">←</button><h2>Register</h2></div>
+<div class="wrap">
+<p>Registration first, then use. No real phone number is needed.</p>
+<label>Display name</label><input id="reg-name" placeholder="e.g. Sazzad">
+<label>Unique @username</label><input id="reg-user" placeholder="e.g. @sazzad">
+<label>Password (demo only — do not reuse a real password)</label><input id="reg-pass" type="password" placeholder="Choose a password">
+<button class="btn-bright" style="width:100%" onclick="doRegister()">Create account</button>
+<p id="reg-result"></p>
+<button class="btn-light" style="width:100%" onclick="showScreen('screen-login')">Already have an account? Login</button>
+</div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- LOGIN -->
+<section class="screen" id="screen-login">
+<div class="top"><button class="back" onclick="showScreen('screen-landing')">←</button><h2>Login</h2></div>
+<div class="wrap">
+<label>@username or Communica ID</label><input id="login-id" placeholder="@sazzad or 8-digit ID">
+<label>Password</label><input id="login-pass" type="password" placeholder="Password">
+<button class="btn-bright" style="width:100%" onclick="doLogin()">Login</button>
+<p id="login-result"></p><br>
+<button class="btn-light" style="width:100%" onclick="showScreen('screen-register')">Create a new account</button>
+</div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- CHAT LIST -->
+<section class="screen" id="screen-chats">
+<div class="top"><h1>Communica</h1><button class="btn-light" onclick="showScreen('screen-newchat')">＋ New</button></div>
+<div class="wrap" style="padding-bottom:0"><input id="chat-search" placeholder="🔍 Search chats…" oninput="filterChats()"></div>
+<div class="tabs">
+<button class="on" data-filter="all" onclick="setFilter(this,'all')">All</button>
+<button data-filter="unread" onclick="setFilter(this,'unread')">Unread</button>
+<button data-filter="fav" onclick="setFilter(this,'fav')">Favorites</button>
+<button data-filter="group" onclick="setFilter(this,'group')">Groups</button>
+<button onclick="showScreen('screen-archived')">Archived</button>
+<button onclick="showScreen('screen-favorites')">★ Favorites screen</button>
+</div>
+<div id="chat-list"></div>
+<div class="wrap">
+<button class="btn-green" onclick="showScreen('screen-newgroup')">＋ New Group</button>
+<button class="btn-light" onclick="showScreen('screen-newchat')">🔍 New Chat / Search people</button>
+<button class="btn-light" onclick="showScreen('screen-keypad')">⌨️ Keypad</button>
+</div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- 1:1 CHAT VIEW -->
+<section class="screen" id="screen-chat">
+<div class="top"><button class="back" onclick="showScreen('screen-chats')">←</button><div class="avatar" id="chat-avatar">R</div><h2 id="chat-title">Rahim</h2><button class="btn-light" onclick="startCall('audio','outgoing',currentChatName)">📞</button><button class="btn-light" onclick="startCall('video','outgoing',currentChatName)">📹</button><button class="btn-light" onclick="showScreen('screen-profile')">👤</button></div>
+<div class="chatbg" id="chat-messages"></div>
+<div id="reply-bar" style="display:none;background:#fff3cd;padding:10px 16px">Replying to: <span id="reply-text"></span> <button onclick="clearReply()">✕</button></div>
+<div class="composer"><input id="chat-input" placeholder="Type a message…"><button class="btn-light" onclick="sendPhotoDemo()">🖼️</button><button class="btn-light" onclick="sendVoiceDemo()">🎤</button><button class="btn-bright" onclick="sendChatMsg()">Send</button></div>
+<div class="wrap"><button class="btn-light" onclick="archiveCurrent()">📥 Archive this chat</button></div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- GROUP CHAT -->
+<section class="screen" id="screen-groupchat">
+<div class="top"><button class="back" onclick="showScreen('screen-chats')">←</button><div class="avatar green">👥</div><h2 id="group-title">Family Group</h2><button class="btn-light" onclick="startCall('audio','outgoing',document.getElementById('group-title').textContent)">📞</button><button class="btn-light" onclick="showScreen('screen-groupinfo')">ℹ️</button></div>
+<div class="chatbg" id="group-messages"></div>
+<div class="composer"><input id="group-input" placeholder="Message the group…"><button class="btn-light" onclick="sendGroupPhotoDemo()">🖼️</button><button class="btn-light" onclick="sendGroupVoiceDemo()">🎤</button><button class="btn-bright" onclick="sendGroupMsg()">Send</button></div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- SAZMU AI CHAT -->
+<section class="screen" id="screen-sazmu">
+<div class="top"><button class="back" onclick="showScreen('screen-chats')">←</button><div class="avatar ai">🤖</div><h2><span id="sazmu-header-name">SAZMU AI</span><br><small style="font-size:12px">🤖 AI — not a human • demo replies</small></h2><button class="btn-light" onclick="showScreen('screen-sazmu-setup')">⚙️ Setup</button></div>
+<div class="chatbg" id="sazmu-messages"></div>
+<div class="composer"><input id="sazmu-input" placeholder="Message SAZMU AI…"><button class="btn-light" onclick="sendSazmuVoiceDemo()">🎤</button><button class="btn-bright" onclick="sendSazmuMsg()">Send</button></div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- SAZMU SETUP -->
+<section class="screen" id="screen-sazmu-setup">
+<div class="top"><button class="back" onclick="showScreen(setupReturn)">←</button><h2>SAZMU AI Setup</h2></div>
+<div class="wrap">
+<p>SAZMU AI is always labelled AI — never a real human.</p>
+<label>Role</label><br>
+<span class="chip on" id="role-bf" onclick="setRole('Boyfriend')">Boyfriend</span>
+<span class="chip" id="role-gf" onclick="setRole('Girlfriend')">Girlfriend</span>
+<label style="display:block;margin-top:12px">Call name — tap a preset, or type a custom name below</label>
+<div id="name-chips"></div>
+<label>Custom name</label><input id="custom-name" placeholder="Type a custom call name">
+<label>Pet name (what the companion calls you)</label><input id="pet-name" placeholder="e.g. baby, sweetheart, jan">
+<label>Tone</label>
+<select id="tone"><option>Emotional and romantic</option><option>Friendly</option><option>Playful / teasing</option><option>Calm and comforting</option></select>
+<label>Language</label>
+<select id="sazmu-lang"><option value="Bengali">Bengali (বাংলা)</option><option value="Banglish">Banglish</option><option value="English">English</option></select>
+<button class="btn-bright" style="width:100%" onclick="saveSazmu()">Save &amp; open SAZMU AI chat</button>
+<p id="sazmu-saved"></p>
+</div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- NEW CHAT / SEARCH -->
+<section class="screen" id="screen-newchat">
+<div class="top"><button class="back" onclick="showScreen('screen-chats')">←</button><h2>New Chat / Search</h2></div>
+<div class="wrap">
+<p>Find people by <b>exact 8-digit Communica ID</b> (partial ID search is NOT supported) OR by @username (exact or prefix).</p>
+<input id="people-search" placeholder="Type 8-digit ID or @username…" oninput="filterPeople()">
+<p id="people-hint" style="font-size:14px;color:#667781"></p>
+<div id="people-list"></div>
+<button class="btn-light" style="width:100%" onclick="showScreen('screen-sazmu-setup')">🤖 Open SAZMU AI (labelled AI) setup</button>
+</div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- CONTACT PROFILE -->
+<section class="screen" id="screen-profile">
+<div class="top"><button class="back" onclick="showScreen('screen-chat')">←</button><h2>Contact Profile</h2></div>
+<div class="wrap" style="text-align:center">
+<div class="avatar" id="profile-avatar" style="width:90px;height:90px;font-size:36px;margin:0 auto">R</div>
+<h2 id="profile-name">Rahim</h2><p id="profile-sub">@rahim • Communica ID 48291357<br><small>In-app ID only — not a phone number</small></p>
+<button class="btn-green" style="width:100%" onclick="showScreen('screen-chat')">Message</button><br><br>
+<button class="btn-light" style="width:100%" onclick="startCall('audio','outgoing',currentChatName)">📞 Audio call (in-app only)</button><br><br>
+<button class="btn-light" style="width:100%" onclick="startCall('video','outgoing',currentChatName)">📹 Video call (in-app only)</button><br><br>
+<button class="btn-light" style="width:100%" id="fav-btn" onclick="favToggle()">⭐ Add to Favorites</button><br><br>
+<button class="btn-light" style="width:100%" onclick="archiveCurrent()">📥 Archive this chat</button><br><br>
+<button class="btn-danger" style="width:100%" onclick="blockContact()">🚫 Block contact</button><br><br>
+<button class="btn-danger" style="width:100%" onclick="reportContact()">⚠️ Report contact</button>
+<p id="profile-result"></p>
+</div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- GROUP INFO -->
+<section class="screen" id="screen-groupinfo">
+<div class="top"><button class="back" onclick="showScreen('screen-groupchat')">←</button><h2>Group Info</h2></div>
+<div class="wrap">
+<h3>Family Group</h3><p>5 members • Created as a demo group</p>
+<div id="member-list"></div>
+<label>Add member by @username</label><input id="add-member" placeholder="@username"><button class="btn-green" onclick="addMember()">Add member (demo)</button><br><br>
+<button class="btn-light" style="width:100%" onclick="archiveGroup()">📥 Archive this group</button>
+<p id="groupinfo-result"></p>
+</div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- CALLS LIST -->
+<section class="screen" id="screen-calls">
+<div class="top"><h1>Calls</h1><button class="btn-light" onclick="showScreen('screen-keypad')">⌨️ Keypad</button></div>
+<div class="wrap"><h3>⭐ Favorites</h3><p>Rahim • Mim — tap a name below to call again (in-app only).</p><h3>Recent Calls</h3></div>
+<div id="call-list"></div>
+<div class="wrap"><button class="btn-green" style="width:100%" onclick="startCall('audio','incoming','Rahim')">Simulate incoming audio call</button><br><br><button class="btn-light" style="width:100%" onclick="startCall('video','incoming','Mim')">Simulate incoming video call</button></div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- CALL SCREEN -->
+<section class="screen" id="screen-call">
+<div class="top"><button class="back" onclick="endCall()">←</button><h2>Call (UI only)</h2></div>
+<div class="callbox">
+<div class="callavatar" id="call-avatar">R</div>
+<h2 id="call-name">Rahim</h2>
+<p id="call-state">Outgoing audio call…</p>
+<div id="call-decision" style="display:none;margin:10px 0"><button class="btn-bright" onclick="acceptCall()">✓ Accept call</button> <button class="btn-danger" onclick="declineCall()">✕ Decline call</button></div>
+<p style="font-size:32px;font-weight:700" id="call-timer">00:00</p>
+<p style="color:#667781">Simulated timer. No real call, no camera or mic is started to view this screen.</p>
+<div class="callbtns">
+<button id="mute-btn" onclick="toggleBtn('mute-btn')">🔇</button>
+<button id="spk-btn" onclick="toggleBtn('spk-btn')">🔊</button>
+<button onclick="toast('Video toggled (demo only)') ; document.getElementById('call-video-note').style.display='block'">📹</button>
+<button class="end" onclick="endCall()">📞 End</button>
+</div>
+<p id="call-video-note" style="display:none">Video variant preview area (demo placeholder — camera not started).</p>
+</div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- KEYPAD -->
+<section class="screen" id="screen-keypad">
+<div class="top"><button class="back" onclick="showScreen(keypadReturn)">←</button><h2>Keypad — dial by Communica ID</h2></div>
+<div class="wrap" style="text-align:center">
+<p>Dial an 8-digit in-app Communica ID. This is NOT a phone number and never dials a real phone.</p>
+<input id="keypad-num" placeholder="8-digit Communica ID" readonly style="text-align:center;font-size:22px">
+<div class="keypad">
+<button onclick="keyDigit('1')">1</button><button onclick="keyDigit('2')">2</button><button onclick="keyDigit('3')">3</button>
+<button onclick="keyDigit('4')">4</button><button onclick="keyDigit('5')">5</button><button onclick="keyDigit('6')">6</button>
+<button onclick="keyDigit('7')">7</button><button onclick="keyDigit('8')">8</button><button onclick="keyDigit('9')">9</button>
+<button onclick="keyDigit('*')">*</button><button onclick="keyDigit('0')">0</button><button onclick="keyDigit('#')">#</button>
+</div>
+<button class="btn-light" onclick="keyClear()">⌫ Clear</button>
+<button class="btn-bright" onclick="keyCall()">📞 Call this Communica ID (in-app UI only)</button>
+<p id="keypad-result"></p>
+</div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- UPDATES / STATUS LIST -->
+<section class="screen" id="screen-updates">
+<div class="top"><h1>Updates</h1><button class="btn-light" onclick="showScreen('screen-my-status')">My Status</button></div>
+<div class="wrap"><h3>My Status</h3><button class="btn-green" onclick="showScreen('screen-my-status')">＋ Add / view My Status</button>
+<h3>Recent updates (24 hours, demo)</h3></div>
+<div id="status-list"></div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- STATUS VIEWER -->
+<section class="screen" id="screen-status-viewer">
+<div class="top"><button class="back" onclick="showScreen('screen-updates')">←</button><h2>Status viewer</h2></div>
+<div class="wrap" style="text-align:center">
+<div class="avatar" style="width:80px;height:80px;font-size:32px;margin:0 auto" id="viewer-avatar">R</div>
+<h2 id="viewer-name">Rahim</h2><p id="viewer-time">2 hours ago • expires in 24 hours</p>
+<div class="photo-demo" id="viewer-text">Hello from Dhaka! ☀️</div><br>
+<button class="btn-light" onclick="prevStatus()">← Previous</button>
+<button class="btn-green" onclick="nextStatus()">Next →</button><br><br>
+<button class="btn-light" style="width:100%" onclick="replyStatus()">💬 Reply to status</button>
+</div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- MY STATUS -->
+<section class="screen" id="screen-my-status">
+<div class="top"><button class="back" onclick="showScreen('screen-updates')">←</button><h2>My Status</h2></div>
+<div class="wrap">
+<p>Your status is visible to contacts for 24 hours, then it expires (demo).</p>
+<label>Status text</label><input id="my-status-text" placeholder="Share an update…">
+<button class="btn-bright" style="width:100%" onclick="postStatus()">Post status (demo)</button><br><br>
+<button class="btn-light" style="width:100%" onclick="postPhotoStatus()">🖼️ Post photo status (demo)</button>
+<p id="my-status-result"></p>
+<h3>Who viewed it (demo)</h3><p>Rahim • Mim</p>
+<button class="btn-light" style="width:100%" onclick="showScreen('screen-updates')">Back to Updates</button>
+</div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- COMMUNITIES -->
+<section class="screen" id="screen-communities">
+<div class="top"><h1>Communities</h1></div>
+<div class="wrap"><p>Browse or join a community, read announcements and join its groups (demo).</p></div>
+<div id="community-list"></div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- SETTINGS / PROFILE EDIT -->
+<section class="screen" id="screen-settings">
+<div class="top"><h1>Settings</h1></div>
+<div class="wrap">
+<label>Display name</label><input id="set-name" value="Sazzad">
+<label>@username</label><input id="set-user" value="@sazzad">
+<label>About</label><input id="set-about" value="Hello, I use Communica!">
+<label>Communica ID (read-only, generated)</label><input value="48291357" readonly>
+<button class="btn-bright" style="width:100%" onclick="saveSettings()">Save profile</button><p id="settings-result"></p>
+<button class="btn-light" style="width:100%" onclick="showScreen('screen-sazmu-setup')">🤖 SAZMU AI settings</button><br><br>
+<button class="btn-light" style="width:100%" onclick="showScreen('screen-archived')">📥 Archived chats</button><br><br>
+<button class="btn-light" style="width:100%" onclick="showScreen('screen-favorites')">⭐ Favorites</button><br><br>
+<button class="btn-danger" style="width:100%" onclick="showScreen('screen-landing');toast('Logged out (demo)')">Logout (demo)</button>
+</div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- ARCHIVED -->
+<section class="screen" id="screen-archived">
+<div class="top"><button class="back" onclick="showScreen('screen-chats')">←</button><h2>Archived chats</h2></div>
+<div id="archived-list"></div>
+<div class="wrap"><button class="btn-light" onclick="showScreen('screen-chats')">Back to Chats</button></div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- FAVORITES -->
+<section class="screen" id="screen-favorites">
+<div class="top"><button class="back" onclick="showScreen('screen-chats')">←</button><h2>Favorites</h2></div>
+<div id="fav-list"></div>
+<div class="wrap"><button class="btn-light" onclick="showScreen('screen-chats')">Back to Chats</button></div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+<!-- NEW GROUP -->
+<section class="screen" id="screen-newgroup">
+<div class="top"><button class="back" onclick="showScreen('screen-chats')">←</button><h2>New Group</h2></div>
+<div class="wrap">
+<label>Group name</label><input id="group-name" placeholder="e.g. Family Group">
+<p>Select members:</p>
+<div id="group-members"></div>
+<button class="btn-bright" style="width:100%" onclick="createGroup()">Create group (demo)</button><p id="newgroup-result"></p>
+</div>
+<div class="disclaimer">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+<div class="footer-note">UI prototype — not yet wired to Neon DB, calls are UI only, SAZMU AI replies here are demo replies, not a real LLM.</div>
+</section>
+
+</div>
+<nav class="bottomnav" id="bottomnav">
+<button class="on" id="nav-chats" onclick="showScreen('screen-chats')">💬<br>Chats</button>
+<button id="nav-updates" onclick="showScreen('screen-updates')">⭕<br>Updates</button>
+<button id="nav-communities" onclick="showScreen('screen-communities')">👥<br>Communities</button>
+<button id="nav-calls" onclick="showScreen('screen-calls')">📞<br>Calls</button>
+<button id="nav-settings" onclick="showScreen('screen-settings')">⚙️<br>Settings</button>
+</nav>
+<div class="toast" id="toast"></div>
+<script>
+var chats=[
+{id:1,name:"Rahim",user:"@rahim",cid:"48291357",last:"Assalamu alaikum, kemon acho?",unread:2,fav:true,group:false,archived:false},
+{id:2,name:"Mim",user:"@mim",cid:"19384726",last:"Tumi ki aj free acho?",unread:0,fav:true,group:false,archived:false},
+{id:3,name:"Family Group",user:"",cid:"",last:"Karim: Dinner at 8?",unread:1,fav:false,group:true,archived:false},
+{id:4,name:"SAZMU AI",user:"@sazmu",cid:"",last:"🤖 AI — Ami achi, bolo ki khobor?",unread:0,fav:false,group:false,archived:false,ai:true},
+{id:5,name:"Karim",user:"@karim",cid:"77451209",last:"Old project files",unread:0,fav:false,group:false,archived:true}
+];
+var people=[
+{name:"Rahim",user:"@rahim",cid:"48291357"},
+{name:"Mim",user:"@mim",cid:"19384726"},
+{name:"Karim",user:"@karim",cid:"77451209"},
+{name:"Sadia",user:"@sadia",cid:"55667788"},
+{name:"SAZMU AI",user:"@sazmu",cid:"",ai:true}
+];
+var statuses=[
+{name:"Rahim",text:"Hello from Dhaka! ☀️",time:"2 hours ago"},
+{name:"Mim",text:"Good morning! 🌸 Shuvo sokal",time:"5 hours ago"},
+{name:"Karim",text:"At the office today",time:"8 hours ago"}
+];
+var statusIdx=0;
+var members=["Rahim (Admin)","Mim","Karim","Sadia"];
+var currentFilter="all", replyTo="", sazmuRole="Boyfriend", sazmuName="Sazzad", callTimer=null, callSecs=0, prevScreen="screen-chats", currentChatId=1, currentChatName="Rahim", setupReturn="screen-sazmu", keypadReturn="screen-calls";
+var bfNames=["Sazzad"], gfNames=["Sadia","Maria","Tithi","Borsha","Anika","Tajmira","Mim","Mimi","Mumu","Ayra","Jannati","Mushfika"];
+function toast(m){var t=document.getElementById("toast");t.textContent=m;t.style.display="block";setTimeout(function(){t.style.display="none"},2500)}
+function showScreen(id){
+  if(id!=="screen-sazmu-setup") setupReturn=id;
+  if(id!=="screen-keypad") keypadReturn=id;
+  document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active")});
+  var el=document.getElementById(id); if(el) el.classList.add("active");
+  var main=["screen-chats","screen-updates","screen-communities","screen-calls","screen-settings"];
+  document.getElementById("bottomnav").classList.toggle("hidden", main.indexOf(id)===-1);
+  document.querySelectorAll(".bottomnav button").forEach(function(b){b.classList.remove("on")});
+  var map={"screen-chats":"nav-chats","screen-updates":"nav-updates","screen-communities":"nav-communities","screen-calls":"nav-calls","screen-settings":"nav-settings"};
+  if(map[id]) document.getElementById(map[id]).classList.add("on");
+  window.scrollTo(0,0);
+}
+function demoEnter(){showScreen("screen-chats");toast("Demo chats (not wired to Neon DB)")}
+function doLogin(){
+  var u=document.getElementById("login-id").value.trim(), p=document.getElementById("login-pass").value;
+  if(!u||!p){document.getElementById("login-result").textContent="Please enter your @username or Communica ID and password.";return}
+  showScreen("screen-chats");toast("Logged in (demo only)");
+}
+function doRegister(){
+  var n=document.getElementById("reg-name").value.trim(), u=document.getElementById("reg-user").value.trim();
+  if(!n||!u){document.getElementById("reg-result").textContent="Please enter a display name and @username.";return}
+  var id=String(Math.floor(10000000+Math.random()*90000000));
+  document.getElementById("reg-result").innerHTML="Welcome, "+n+"! Your Communica ID is <b>"+id+"</b> (demo only, in-app ID — not a phone number).";
+  setTimeout(function(){showScreen("screen-chats");toast("Registered (demo only)")},1200);
+}
+function renderChats(){
+  var q=(document.getElementById("chat-search").value||"").toLowerCase(), html="";
+  chats.forEach(function(c){
+    if(c.archived) return;
+    if(currentFilter==="unread"&&!c.unread) return;
+    if(currentFilter==="fav"&&!c.fav) return;
+    if(currentFilter==="group"&&!c.group) return;
+    if(q&&c.name.toLowerCase().indexOf(q)===-1&&c.last.toLowerCase().indexOf(q)===-1) return;
+    html+='<button class="chatrow" onclick="openChat('+c.id+')"><span class="avatar '+(c.ai?"ai":c.group?"green":"")+'">'+c.name.charAt(0)+'</span><span style="flex:1"><b>'+c.name+(c.ai?" 🤖 AI":"")+'</b><small>'+c.last+'</small></span>'+(c.unread?'<span class="badge">'+c.unread+'</span>':"")+'</button>';
+  });
+  document.getElementById("chat-list").innerHTML=html||"<p class='wrap'>No chats match.</p>";
+}
+function setFilter(btn,f){currentFilter=f;document.querySelectorAll(".tabs button").forEach(function(b){b.classList.remove("on")});btn.classList.add("on");renderChats()}
+function filterChats(){renderChats()}
+function openChat(id){
+  var c=chats.find(function(x){return x.id===id});
+  if(!c) return;
+  if(c.ai){showScreen("screen-sazmu");return}
+  if(c.group){document.getElementById("group-title").textContent=c.name;showScreen("screen-groupchat");return}
+  currentChatId=c.id; currentChatName=c.name;
+  document.getElementById("chat-title").textContent=c.name;
+  document.getElementById("chat-avatar").textContent=c.name.charAt(0);
+  document.getElementById("profile-name").textContent=c.name;
+  document.getElementById("profile-avatar").textContent=c.name.charAt(0);
+  document.getElementById("profile-sub").innerHTML=(c.user||"")+(c.cid?" • Communica ID "+c.cid:"")+"<br><small>In-app ID only — not a phone number</small>";
+  document.getElementById("fav-btn").textContent=c.fav?"★ Remove from Favorites":"⭐ Add to Favorites";
+  showScreen("screen-chat");
+}
+function bubbleHtml(text,me){
+  return '<div class="bubble '+(me?"me":"")+'">'+text+'<br><small>'+(me?"You • now • ✓✓ Seen (demo)":"Now")+'</small><br><button class="react" onclick="this.textContent=\'❤️ reacted\';toast(\'Reaction added (demo)\')">♡ React</button> <button class="react" onclick="setReply(\''+text.replace(/'/g,"")+'\')">↩ Reply</button>'+(me?' <button class="react" onclick="deleteBubble(this)">🗑 Delete</button>':"")+'</div>';
+}
+function deleteBubble(btn){var b=btn.closest?btn.closest(".bubble"):null;if(b&&b.remove)b.remove();toast("Message deleted (demo only)")}
+function archiveCurrent(){
+  var c=chats.find(function(x){return x.id===currentChatId}); if(!c) return;
+  c.archived=true; renderChats(); renderArchFav(); showScreen("screen-chats"); toast("Chat archived (demo)");
+}
+function archiveGroup(){
+  var t=document.getElementById("group-title").textContent;
+  var g=chats.find(function(x){return x.name===t&&x.group}); if(!g){toast("Group not in demo chat list");return}
+  g.archived=true; renderChats(); renderArchFav(); showScreen("screen-chats"); toast("Group archived (demo)");
+}
+function favToggle(){
+  var c=chats.find(function(x){return x.id===currentChatId}); if(!c) return;
+  c.fav=!c.fav; document.getElementById("fav-btn").textContent=c.fav?"★ Remove from Favorites":"⭐ Add to Favorites";
+  renderChats(); renderArchFav(); toast(c.fav?"Added to Favorites (demo)":"Removed from Favorites (demo)");
+}
+function openCommunityGroup(n){document.getElementById("group-title").textContent=n;showScreen("screen-groupchat")}
+function replyStatus(){
+  var s=statuses[statusIdx]; if(!s) return;
+  document.getElementById("chat-title").textContent=s.name;
+  document.getElementById("chat-avatar").textContent=s.name.charAt(0);
+  document.getElementById("profile-name").textContent=s.name;
+  currentChatName=s.name;
+  showScreen("screen-chat"); toast("Replying to status (demo)");
+}
+function initMessages(){
+  document.getElementById("chat-messages").innerHTML=bubbleHtml("Assalamu alaikum, kemon acho?",false)+bubbleHtml("Alhamdulillah valo! Tumi?",true)+'<div class="bubble">📷 Photo message (demo)<div class="photo-demo">Photo demo</div></div><div class="bubble me">🎤 Voice message (demo) <button class="react" onclick="toast(\'Playing demo voice…\')">▶ Play</button></div>';
+  document.getElementById("group-messages").innerHTML=bubbleHtml("Karim: Dinner at 8?",false)+bubbleHtml("Mim: Ami aschi! 🎉",false);
+  document.getElementById("sazmu-messages").innerHTML='<div class="bubble">🤖 Ami SAZMU AI — ami ekjon AI, manush noi. Ami <b>'+sazmuName+'</b> hishebe kotha bolchi (demo reply). Bolo, aj kemon katlo?</div>';
+}
+function setReply(t){replyTo=t;document.getElementById("reply-text").textContent=t;document.getElementById("reply-bar").style.display="block"}
+function clearReply(){replyTo="";document.getElementById("reply-bar").style.display="none"}
+function sendChatMsg(){
+  var v=document.getElementById("chat-input").value.trim(); if(!v) return;
+  var pre=replyTo?("↩ Replying to: "+replyTo+"<br>"):"";
+  document.getElementById("chat-messages").innerHTML+=bubbleHtml(pre+v,true);
+  document.getElementById("chat-input").value=""; clearReply();
+}
+function sendPhotoDemo(){document.getElementById("chat-messages").innerHTML+='<div class="bubble me">📷 Photo sent (demo)<div class="photo-demo">Photo demo</div></div>';toast("Photo added (demo only)")}
+function sendVoiceDemo(){document.getElementById("chat-messages").innerHTML+='<div class="bubble me">🎤 Voice message sent (demo) <button class="react" onclick="toast(\'Playing demo voice…\')">▶ Play</button></div>';toast("Voice message added (demo only)")}
+function sendGroupMsg(){
+  var v=document.getElementById("group-input").value.trim(); if(!v) return;
+  document.getElementById("group-messages").innerHTML+=bubbleHtml(v,true); document.getElementById("group-input").value="";
+}
+function sendGroupPhotoDemo(){document.getElementById("group-messages").innerHTML+='<div class="bubble me">📷 Photo sent (demo)<div class="photo-demo">Photo demo</div></div>';toast("Photo added (demo only)")}
+function sendGroupVoiceDemo(){document.getElementById("group-messages").innerHTML+='<div class="bubble me">🎤 Voice message sent (demo) <button class="react" onclick="toast(\'Playing demo voice…\')">▶ Play</button></div>';toast("Voice message added (demo only)")}
+function sendSazmuVoiceDemo(){document.getElementById("sazmu-messages").innerHTML+='<div class="bubble me">🎤 Voice message sent (demo) <button class="react" onclick="toast(\'Playing demo voice…\')">▶ Play</button></div>';toast("Voice message added (demo only)")}
+function sendSazmuMsg(){
+  var v=document.getElementById("sazmu-input").value.trim(); if(!v) return;
+  document.getElementById("sazmu-messages").innerHTML+=bubbleHtml(v,true);
+  var lang=document.getElementById("sazmu-lang").value;
+  var rep=lang==="Bengali"?"🤖 (ডেমো উত্তর) বুঝতে পেরেছি। তুমি যা বললে, সেটা নিয়ে ভাবছি — আরেকটু বলো তো?":lang==="Banglish"?"🤖 (Demo reply) Bujhlam! Tumi ja bolla seta shundor laglo, ar ektu details dao?":"🤖 (Demo reply) I hear you. Tell me a little more about that?";
+  document.getElementById("sazmu-messages").innerHTML+=bubbleHtml(rep,false);
+  document.getElementById("sazmu-input").value="";
+}
+function renderNameChips(){
+  var list=sazmuRole==="Boyfriend"?bfNames:gfNames, html="";
+  list.forEach(function(n){html+='<span class="chip '+(n===sazmuName?"on":"")+'" onclick="pickName(\''+n+'\')">'+n+'</span>'});
+  document.getElementById("name-chips").innerHTML=html;
+}
+function pickName(n){sazmuName=n;renderNameChips()}
+function setRole(r){
+  sazmuRole=r;
+  document.getElementById("role-bf").classList.toggle("on",r==="Boyfriend");
+  document.getElementById("role-gf").classList.toggle("on",r==="Girlfriend");
+  if(r==="Boyfriend") sazmuName="Sazzad"; else sazmuName="";
+  renderNameChips();
+}
+function saveSazmu(){
+  var custom=document.getElementById("custom-name").value.trim();
+  if(custom) sazmuName=custom;
+  if(!sazmuName){document.getElementById("sazmu-saved").textContent="Please pick or type a call name.";return}
+  document.getElementById("sazmu-header-name").textContent="SAZMU AI ("+sazmuName+")";
+  document.getElementById("sazmu-saved").textContent="Saved: "+sazmuRole+" • "+sazmuName+" • pet name: "+(document.getElementById("pet-name").value||"—")+" • "+document.getElementById("tone").value+" • "+document.getElementById("sazmu-lang").value;
+  initMessages(); showScreen("screen-sazmu"); toast("SAZMU setup saved (demo)");
+}
+function filterPeople(){
+  var q=(document.getElementById("people-search").value||"").trim(), hint=document.getElementById("people-hint"), html="";
+  if(!q){hint.textContent="";document.getElementById("people-list").innerHTML="";return}
+  if(/^\d+$/.test(q)){
+    if(q.length!==8){hint.textContent="Communica ID search is EXACT-ONLY: enter all 8 digits. Partial ID search is not supported.";document.getElementById("people-list").innerHTML="";return}
+    var m=people.filter(function(p){return p.cid===q});
+    hint.textContent=m.length?"Exact ID match found.":"No user with that exact Communica ID (demo data).";
+    html=m.map(function(p){return personRow(p)}).join("");
+  } else {
+    var qq=q.replace(/^@/,"").toLowerCase();
+    var res=people.filter(function(p){return p.user.replace(/^@/,"").toLowerCase()===qq||p.user.replace(/^@/,"").toLowerCase().indexOf(qq)===0});
+    hint.textContent=res.length?res.length+" username match(es) (exact or prefix).":"No username match (demo data).";
+    html=res.map(function(p){return personRow(p)}).join("");
+  }
+  document.getElementById("people-list").innerHTML=html;
+}
+function personRow(p){
+  return '<div class="chatrow" style="cursor:default"><span class="avatar '+(p.ai?"ai":"")+'">'+p.name.charAt(0)+'</span><span style="flex:1"><b>'+p.name+(p.ai?" 🤖 AI — not a human":"")+'</b><small>'+p.user+(p.cid?" • ID "+p.cid:"")+'</small></span><button class="btn-green" onclick="'+(p.ai?"showScreen(\'screen-sazmu\')":"showScreen(\'screen-chat\')")+'">Chat</button></div>';
+}
+function blockContact(){document.getElementById("profile-result").textContent="Contact blocked (demo). You will no longer receive their messages.";toast("Blocked (demo)")}
+function reportContact(){document.getElementById("profile-result").textContent="Contact reported (demo). Thank you — a real report would go to moderation in a later phase.";toast("Reported (demo)")}
+function renderMembers(){
+  document.getElementById("member-list").innerHTML=members.map(function(m,i){return '<p>'+m+' <button class="btn-light" onclick="toast(\'Made admin (demo): '+m+'\')">Make admin</button> <button class="btn-light" onclick="removeMember('+i+')">Remove</button></p>'}).join("");
+  document.getElementById("group-members").innerHTML=people.filter(function(p){return !p.ai}).map(function(p){return '<label style="display:block;font-weight:400"><input type="checkbox" value="'+p.name+'" style="width:auto"> '+p.name+' '+p.user+'</label>'}).join("");
+}
+function removeMember(i){members.splice(i,1);renderMembers();toast("Member removed (demo)")}
+function addMember(){
+  var v=document.getElementById("add-member").value.trim(); if(!v) return;
+  members.push(v); renderMembers(); document.getElementById("groupinfo-result").textContent="Added "+v+" (demo).";
+}
+function renderCalls(){
+  var items=[["Rahim","audio","Outgoing • 2 min ago"],["Mim","video","Missed • 1 hour ago"],["Karim","audio","Incoming • Yesterday"]];
+  document.getElementById("call-list").innerHTML=items.map(function(c){return '<button class="chatrow" onclick="startCall(\''+c[1]+'\',\'outgoing\',\''+c[0]+'\')"><span class="avatar">'+c[0].charAt(0)+'</span><span style="flex:1"><b>'+c[0]+'</b><small>'+c[1]+' call • '+c[2]+' (in-app only)</small></span><span>📞</span></button>'}).join("");
+}
+function fmt(s){return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")}
+function startCall(type,dir,name){
+  prevScreen=document.querySelector(".screen.active")?document.querySelector(".screen.active").id:"screen-chats";
+  document.getElementById("call-name").textContent=name;
+  document.getElementById("call-avatar").textContent=name.charAt(0);
+  document.getElementById("call-state").textContent=(dir==="incoming"?"Incoming ":"Outgoing ")+type+" call… (UI only"+(dir==="incoming"?" — accept or decline below)":")")+")";
+  document.getElementById("call-decision").style.display=dir==="incoming"?"block":"none";
+  document.getElementById("call-video-note").style.display=type==="video"?"block":"none";
+  callSecs=0; document.getElementById("call-timer").textContent="00:00";
+  if(callTimer) clearInterval(callTimer);
+  callTimer=setInterval(function(){callSecs++;document.getElementById("call-timer").textContent=fmt(callSecs)},1000);
+  showScreen("screen-call");
+}
+function acceptCall(){
+  document.getElementById("call-decision").style.display="none";
+  document.getElementById("call-state").textContent="In call (UI only — demo timer)";
+  callSecs=0; document.getElementById("call-timer").textContent="00:00"; toast("Call accepted (UI only)");
+}
+function declineCall(){document.getElementById("call-decision").style.display="none";endCall()}
+function endCall(){if(callTimer) clearInterval(callTimer);document.getElementById("call-decision").style.display="none";showScreen(prevScreen==="screen-call"?"screen-calls":prevScreen);toast("Call ended (UI only)")}
+function toggleBtn(id){document.getElementById(id).classList.toggle("on");toast("Toggled (demo only)")}
+function keyDigit(d){
+  var el=document.getElementById("keypad-num");
+  if(!/^\d$/.test(d)){document.getElementById("keypad-result").textContent="Digits only — a Communica ID is 8 digits, not a phone number.";return}
+  if(el.value.length<8) el.value+=d;
+}
+function keyClear(){document.getElementById("keypad-num").value="";document.getElementById("keypad-result").textContent=""}
+function keyCall(){
+  var v=document.getElementById("keypad-num").value;
+  if(!/^\d{8}$/.test(v)){document.getElementById("keypad-result").textContent="Enter exactly 8 digits — this is an in-app Communica ID, not a phone number.";return}
+  startCall("audio","outgoing","ID "+v);
+}
+function renderStatuses(){
+  document.getElementById("status-list").innerHTML=statuses.map(function(s,i){return '<button class="chatrow" onclick="viewStatus('+i+')"><span class="avatar">'+s.name.charAt(0)+'</span><span style="flex:1"><b>'+s.name+'</b><small>'+s.time+'</small></span></button>'}).join("");
+}
+function viewStatus(i){statusIdx=i;var s=statuses[i];document.getElementById("viewer-name").textContent=s.name;document.getElementById("viewer-avatar").textContent=s.name.charAt(0);document.getElementById("viewer-text").textContent=s.text;document.getElementById("viewer-time").textContent=s.time+" • expires in 24 hours";showScreen("screen-status-viewer")}
+function nextStatus(){viewStatus((statusIdx+1)%statuses.length)}
+function prevStatus(){viewStatus((statusIdx-1+statuses.length)%statuses.length)}
+function postStatus(){
+  var v=document.getElementById("my-status-text").value.trim(); if(!v) return;
+  statuses.unshift({name:"You",text:v,time:"Just now"}); renderStatuses();
+  document.getElementById("my-status-result").textContent="Status posted (demo): "+v;
+}
+function postPhotoStatus(){
+  statuses.unshift({name:"You",text:"📷 Photo status (demo)",time:"Just now"}); renderStatuses();
+  document.getElementById("my-status-result").textContent="Photo status posted (demo).";
+}
+function renderCommunities(){
+  var comms=[["Bangladesh Friends","Announcement group • 120 members"],["Study Group","Notes & exams • 45 members"],["Family Updates","Announcements only • 18 members"]];
+  document.getElementById("community-list").innerHTML=comms.map(function(c){return '<div class="statuscard"><b>'+c[0]+'</b><p>'+c[1]+'</p><button class="btn-green" onclick="this.textContent=\'Joined ✓ (demo)\';toast(\'Joined community (demo)\')">Join</button> <button class="btn-light" onclick="openCommunityGroup(\''+c[0]+'\')">Open group</button></div>'}).join("");
+}
+function renderArchFav(){
+  document.getElementById("archived-list").innerHTML=chats.filter(function(c){return c.archived}).map(function(c){return '<div class="chatrow" style="cursor:default"><span class="avatar">'+c.name.charAt(0)+'</span><span style="flex:1"><b>'+c.name+'</b><small>'+c.last+'</small></span><button class="btn-light" onclick="unarchive('+c.id+')">Unarchive</button></div>'}).join("")||"<p class='wrap'>No archived chats.</p>";
+  document.getElementById("fav-list").innerHTML=chats.filter(function(c){return c.fav&&!c.archived}).map(function(c){return '<button class="chatrow" onclick="openChat('+c.id+')"><span class="avatar">'+c.name.charAt(0)+'</span><span style="flex:1"><b>'+c.name+'</b><small>'+c.last+'</small></span></button>'}).join("");
+}
+function unarchive(id){var c=chats.find(function(x){return x.id===id});if(c)c.archived=false;renderChats();renderArchFav();toast("Unarchived (demo)")}
+function createGroup(){
+  var n=document.getElementById("group-name").value.trim(); if(!n){document.getElementById("newgroup-result").textContent="Please enter a group name.";return}
+  chats.push({id:Date.now(),name:n,user:"",cid:"",last:"Group created (demo)",unread:0,fav:false,group:true,archived:false});
+  renderChats(); document.getElementById("newgroup-result").textContent="Group “"+n+"” created (demo)."; setTimeout(function(){document.getElementById("group-title").textContent=n;showScreen("screen-groupchat")},800);
+}
+function saveSettings(){
+  var n=document.getElementById("set-name").value.trim(), u=document.getElementById("set-user").value.trim();
+  if(!n||!u){document.getElementById("settings-result").textContent="Please enter a display name and @username.";return}
+  document.getElementById("settings-result").textContent="Profile saved (demo): "+n+" "+u;
+  toast("Profile saved (demo)");
+}
+renderChats(); renderNameChips(); initMessages(); renderMembers(); renderCalls(); renderStatuses(); renderCommunities(); renderArchFav();
+showScreen("screen-landing");
+</script>
+</body>
+</html>

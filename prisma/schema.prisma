@@ -1,0 +1,252 @@
+// Communica — Prisma schema (Neon DB / PostgreSQL)
+// App: Communica (Social Communication). Chatbot inside: SAZMU AI (labelled AI, not a human).
+// Backend: Prisma + Neon DB only. NOT Supabase (corrected 2026-11-03).
+// Auth: JWT + bcrypt passwordHash. No real phone number is stored:
+//   communicaId is a generated random 8-digit IN-APP number, searchable like a phone number.
+//   username is a unique @handle. Either one finds a user.
+// NOTE: validated with `prisma validate` but NOT yet pushed to a live Neon DB —
+// DATABASE_URL has not been given yet. Do not commit a real .env.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CompanionRole {
+  Boyfriend
+  Girlfriend
+}
+
+enum ChatType {
+  DIRECT
+  GROUP
+}
+
+enum MessageType {
+  TEXT
+  PHOTO
+  VOICE
+  VIDEO
+  FILE
+  SYSTEM
+}
+
+enum MemberRole {
+  ADMIN
+  MEMBER
+}
+
+enum CallType {
+  AUDIO
+  VIDEO
+}
+
+enum CallStatus {
+  MISSED
+  ACCEPTED
+  DECLINED
+  ENDED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique // lower-cased @handle, 3-20 chars, letters/numbers/_
+  displayName  String
+  communicaId  String   @unique // random 8-digit in-app ID, e.g. 48291357 — NOT a phone number, cannot place/receive phone calls
+  passwordHash String
+  avatarUrl    String?
+  bio          String?
+  lastSeenAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sentMessages     Message[]       @relation("MessageSender")
+  memberships      ChatMember[]
+  createdChats     Chat[]          @relation("ChatCreator")
+  contacts         Contact[]       @relation("ContactOwner")
+  contactOf        Contact[]       @relation("ContactUser")
+  callsMade        CallLog[]       @relation("CallCaller")
+  callsReceived    CallLog[]       @relation("CallCallee")
+  statusUpdates    StatusUpdate[]
+  companionSetting CompanionSetting?
+  memories         UserMemory[]
+  reactions        Reaction[]
+  messageReads     MessageRead[]
+
+  @@index([username])
+  @@index([communicaId])
+}
+
+// Accepted-contact gate: a call is only allowed when the callee accepted the caller,
+// unless the callee's settings allow calls from anyone (app setting, Phase 2).
+model Contact {
+  id            String   @id @default(cuid())
+  ownerId       String
+  owner         User     @relation("ContactOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  contactUserId String
+  contactUser   User     @relation("ContactUser", fields: [contactUserId], references: [id], onDelete: Cascade)
+  nickname      String?
+  isFavorite    Boolean  @default(false)
+  isBlocked     Boolean  @default(false)
+  accepted      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@unique([ownerId, contactUserId])
+  @@index([ownerId])
+}
+
+model Chat {
+  id          String   @id @default(cuid())
+  type        ChatType @default(DIRECT)
+  title       String? // group name; DIRECT chats use the other member's displayName
+  avatarUrl   String?
+  createdById String?
+  createdBy   User?    @relation("ChatCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members  ChatMember[]
+  messages Message[]
+  calls    CallLog[]
+}
+
+model ChatMember {
+  id         String     @id @default(cuid())
+  chatId     String
+  chat       Chat       @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       MemberRole @default(MEMBER)
+  muted      Boolean    @default(false)
+  archived   Boolean    @default(false)
+  lastReadAt DateTime?
+  joinedAt   DateTime   @default(now())
+
+  @@unique([chatId, userId])
+  @@index([userId])
+  @@index([chatId])
+}
+
+model Message {
+  id            String      @id @default(cuid())
+  chatId        String
+  chat          Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  senderId      String
+  sender        User        @relation("MessageSender", fields: [senderId], references: [id])
+  type          MessageType @default(TEXT)
+  text          String?
+  mediaUrl      String?
+  mediaMime     String?
+  durationSec   Int?
+  replyToId     String?
+  replyTo       Message?    @relation("MessageReply", fields: [replyToId], references: [id])
+  replies       Message[]   @relation("MessageReply")
+  editedAt      DateTime?
+  deletedForAll Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  reactions Reaction[]
+  reads     MessageRead[]
+
+  @@index([chatId, createdAt])
+  @@index([senderId])
+}
+
+model MessageRead {
+  id        String   @id @default(cuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt    DateTime @default(now())
+
+  @@unique([messageId, userId])
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emoji     String
+  createdAt DateTime @default(now())
+
+  @@unique([messageId, userId, emoji])
+}
+
+model StatusUpdate {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaUrl  String?
+  text      String?
+  expiresAt DateTime // createdAt + 24 hours (WhatsApp-style Status)
+  createdAt DateTime @default(now())
+
+  views StatusView[]
+
+  @@index([userId, createdAt])
+}
+
+model StatusView {
+  id       String       @id @default(cuid())
+  statusId String
+  status   StatusUpdate @relation(fields: [statusId], references: [id], onDelete: Cascade)
+  viewerId String
+  viewedAt DateTime     @default(now())
+
+  @@unique([statusId, viewerId])
+}
+
+model CallLog {
+  id          String     @id @default(cuid())
+  chatId      String?
+  chat        Chat?      @relation(fields: [chatId], references: [id])
+  callerId    String
+  caller      User       @relation("CallCaller", fields: [callerId], references: [id])
+  calleeId    String
+  callee      User       @relation("CallCallee", fields: [calleeId], references: [id])
+  type        CallType
+  status      CallStatus
+  startedAt   DateTime   @default(now())
+  endedAt     DateTime?
+  durationSec Int?
+
+  @@index([callerId, startedAt])
+  @@index([calleeId, startedAt])
+}
+
+// SAZMU AI companion settings, per user. The chatbot itself is a system contact
+// in the app (labelled AI), not a row in User — so it can never be confused with a human.
+model CompanionSetting {
+  id        String        @id @default(cuid())
+  userId    String        @unique
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      CompanionRole
+  callName  String // Boyfriend default: Sazzad. Girlfriend: preset list (Sadia, Maria, Tithi, Borsha, Anika, Tajmira, Mim, Mimi, Mumu, Ayra, Jannati, Mushfika) or a custom name chosen by the user; no girlfriend default is invented.
+  petName   String? // what the companion calls the user (baby/sweetheart/...), optional
+  tone      String        @default("soft")
+  language  String        @default("Bengali") // Bengali | Banglish | English
+  updatedAt DateTime      @updatedAt
+}
+
+// Generative-AI user data, with consent: only facts/preferences the user gave
+// in chat or in settings. NEVER scraped private chats, NEVER another person's data.
+// A user can delete their memories at any time.
+model UserMemory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String // e.g. favourite_food, job, mood_note
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+  @@index([userId])
+}

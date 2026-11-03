@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "forceConsistentCasingInFileNames": true,
+        "lib": [
+            "ES2022",
+            "DOM"
+        ],
+        "module": "CommonJS",
+        "moduleResolution": "Node",
+        "noEmit": true,
+        "skipLibCheck": true,
+        "strict": true,
+        "target": "ES2022",
+        "types": []
+    },
+    "include": [
+        "src"
+    ]
+}

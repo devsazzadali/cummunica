@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Communica — Social Communication (Phase 1 Demo)</title>
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="logo">💬</div><div><h1 id="topTitle">Communica</h1><p id="topSub">Social Communication — WhatsApp-like demo (Phase 1)</p></div></div>
+<div class="wrap">
+
+<!-- REGISTRATION FIRST -->
+<div id="screen-register" class="card">
+<h2 style="margin-top:0">Communica — Registration</h2>
+<p class="notice"><b>Phase 1 demo only:</b> this prototype stores data <b>only in this browser</b> (localStorage).
+There is no server, no Neon DB connection, no real account, and no upload yet.
+Do <b>not</b> use a real password you use anywhere else.
+After registration you can use the demo app. Real accounts (Prisma + Neon DB) come in Phase 2 wiring.</p>
+<form id="registerForm">
+<label>Username (unique, 3–20 letters/numbers/_)<br><input id="regUsername" placeholder="e.g. sazzad" autocomplete="off"></label><br>
+<label>Display name<br><input id="regDisplay" placeholder="e.g. Sazzad"></label><br>
+<label>Password (demo only, min 4 characters)<br><input id="regPassword" type="password" placeholder="Demo password only"></label><br>
+<p id="regError" style="color:#c62828"></p>
+<button type="submit" style="width:100%">Register &amp; start →</button>
+</form>
+<p class="small">On registration you get a random 8-digit <b>Communica ID</b> (an in-app number, NOT a real phone number).
+Other users can find you by that ID or by @username.</p>
+<button id="demoLogin" class="secondary" style="width:100%">Or continue with demo user Ayesha (no registration)</button>
+</div>
+
+<!-- MAIN -->
+<div id="screen-main" style="display:none">
+<div id="tab-chats">
+<div class="card">
+<label>🔍 Ask SAZMU AI or Search users (by @username or Communica ID)<br><input id="searchInput" placeholder="Search SAZMU AI, @ayesha, or ID 48291357…"></label>
+<div id="searchResults"></div>
+<div style="margin-top:10px">
+<button class="secondary chip sel" data-filter="all">All</button>
+<button class="secondary chip" data-filter="unread">Unread</button>
+<button class="secondary chip" data-filter="favorites">Favorites</button>
+<button id="logoutBtn" class="secondary" style="float:right">Log out (demo)</button>
+</div>
+<div id="chatList"></div>
+<div id="archivedBox"></div>
+</div>
+</div>
+
+<div id="tab-updates" class="card" style="display:none">
+<h2>Updates</h2>
+<div class="placeholder"><p><b>Coming in Phase 3.</b></p><p>Status/Updates like WhatsApp are not built in Phase 1. This screen is a placeholder only.</p></div>
+</div>
+<div id="tab-communities" class="card" style="display:none">
+<h2>Communities</h2>
+<div class="placeholder"><p><b>Coming in Phase 3.</b></p><p>Communities and group discovery are not built in Phase 1. This screen is a placeholder only.</p></div>
+</div>
+<div id="tab-calls" class="card" style="display:none">
+<h2>Calls</h2>
+<div class="placeholder"><p><b>Coming in Phase 2.</b></p><p>Audio and video calls (WebRTC, in-app only) are not built in Phase 1. No real call is placed from this demo.</p></div>
+</div>
+<p class="small">Phase 1 demo: text chat + SAZMU AI prototype replies + local photo/voice messages only. No server, no upload, no real calls.</p>
+</div>
+
+<!-- CHAT VIEW -->
+<div id="screen-chat" style="display:none">
+<div class="card">
+<button id="backBtn" class="secondary">← Back</button>
+<h2 id="chatTitle" style="margin-top:10px"></h2>
+<div id="sazmuSettings" style="display:none;border:1px solid #eee;border-radius:12px;padding:12px;margin-bottom:10px">
+<p style="margin-top:0"><b>SAZMU AI settings</b> — SAZMU AI is the model/chatbot name. Set a separate call name below.</p>
+<label>Role<br><select id="sazmuRole"><option>Girlfriend</option><option>Boyfriend</option></select></label><br>
+<label>Call name<br><input id="sazmuName" value="SAZMU"></label>
+<div id="sazmuChips"></div>
+<label>What should SAZMU call you? (pet name, optional)<br><input id="sazmuPet" placeholder="e.g. বেবি"></label><br>
+<button id="saveSazmu">Save SAZMU settings</button>
+<p class="small">Boyfriend default call name is Sazzad. Girlfriend: pick a preset above or type a custom name; “Mumu” in the list is a call-name option only, not the app brand.</p>
+</div>
+<div id="chatbox"></div>
+<div id="status"></div>
+<div class="inputbar">
+<input id="chatInput" placeholder="Message…">
+<label style="width:auto;margin:0"><span class="secondary" style="display:inline-block;padding:10px 14px;border-radius:10px;cursor:pointer">📷 Photo</span><input id="photoInput" type="file" accept="image/*" style="display:none"></label>
+<button id="voiceBtn" class="secondary">🎤 Voice</button>
+<button id="speakBtn" class="secondary">🔊 Hear last</button>
+<button id="sendBtn">➤ Send</button>
+</div>
+<button id="archiveBtn" class="secondary">Archive this chat</button>
+<p class="small">Photo/voice messages in Phase 1 stay in this browser only — they are not uploaded anywhere. Voice uses your browser mic with permission.</p>
+</div>
+</div>
+
+</div>
+<div id="tabs" class="tabs" style="display:none">
+<button data-tab="chats" class="on">💬 Chats</button>
+<button data-tab="updates">⭕ Updates</button>
+<button data-tab="communities">👥 Communities</button>
+<button data-tab="calls">📞 Calls</button>
+</div>
+<script src="replies.js"></script>
+<script src="app.js"></script>
+</body></html>
