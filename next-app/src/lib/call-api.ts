@@ -118,9 +118,19 @@ export async function resolveCalleeIdentifier(token: string, query: string): Pro
   const res = await fetch(`/api/users/search?q=${encodeURIComponent(trimmed)}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  if (res.status === 401) {
+    const err = new Error("sign-in expired") as Error & { status: number };
+    err.status = 401;
+    throw err;
+  }
   if (!res.ok) return null;
   const data: Record<string, unknown> = await res.json().catch(() => ({}));
-  const users = Array.isArray(data.users) ? data.users : [];
+  // BUG FIX (2026-11-03): /api/users/search returns { results: [...] },
+  // not { users: [...] }. The old code read data.users, so it was always
+  // [] and EVERY username call failed as "Could not find" — even for a
+  // real chat partner. Every other search consumer already used results.
+  const raw = Array.isArray(data.results) ? data.results : Array.isArray(data.users) ? data.users : [];
+  const users = raw;
   const exact = users.find((u) => (u as Record<string, unknown>).username === trimmed.toLowerCase());
   const first = (exact ?? users[0]) as Record<string, unknown> | undefined;
   if (!first || typeof first.username !== "string") return null;

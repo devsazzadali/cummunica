@@ -364,7 +364,12 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
         fail("This is your own account — you cannot call yourself. Call another registered user who has accepted you as a contact.");
         return;
       }
-      const identifier = await resolveCalleeIdentifier(token, query);
+      let identifier: string | null = null;
+      try { identifier = await resolveCalleeIdentifier(token, query); }
+      catch (err) {
+        if ((err as { status?: number }).status === 401) { fail("Your sign-in expired. Sign in again and retry the call.", true); return; }
+        fail("Could not check that user right now — please try again."); return;
+      }
       if (cancelled) return;
       if (!identifier) {
         fail(`Could not find "${query}" as a registered Communica user. That account has not registered on this app yet, or the name/ID is wrong — ask them to register first, then send a contact request and wait for acceptance before calling.`);
