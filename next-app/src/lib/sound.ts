@@ -34,3 +34,33 @@ export async function notifyMessage(title: string, body: string) {
     }
   } catch {}
 }
+
+// Incoming-call ringtone: own WebAudio tones, no external file.
+// Returns a stop function. Repeats until stopped (accept/decline/end).
+export function startRingtone(): () => void {
+  if (!soundOn()) return () => {};
+  try {
+    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return () => {};
+    const ctx = new Ctx();
+    void ctx.resume().catch(() => {});
+    const beep = (freq: number, at: number, dur: number) => {
+      try {
+        const osc = ctx.createOscillator(); const gain = ctx.createGain();
+        osc.type = "sine"; osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime + at);
+        gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + at + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + at + dur);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + at); osc.stop(ctx.currentTime + at + dur + 0.05);
+      } catch {}
+    };
+    const ring = () => { beep(880, 0, 0.35); beep(880, 0.45, 0.35); };
+    ring();
+    const t = window.setInterval(ring, 1400);
+    return () => { try { window.clearInterval(t); void ctx.close().catch(() => {}); } catch {} };
+  } catch { return () => {}; }
+}
+export function vibrateIncoming(): void {
+  try { if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate([400, 200, 400, 200, 400]); } catch {}
+}

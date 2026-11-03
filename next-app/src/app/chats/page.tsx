@@ -1,12 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Search, Hash } from "lucide-react";
 import { AppShell, TwoPane } from "@/components/ui";
 import { RealChatList } from "@/components/real-chat";
+import { apiJson } from "@/lib/api-client";
 type F="all"|"unread"|"favorites"|"groups";
 export default function ChatsPage(){
  const [filter,setFilter]=useState<F>("all");
+ const [pending,setPending]=useState(0);
+ useEffect(()=>{ (async()=>{ try{ const d=await apiJson("/api/contacts") as {contacts:{accepted:boolean}[]}; setPending(d.contacts.filter((c)=>!c.accepted).length); }catch{} })(); },[]);
  const [q,setQ]=useState("");
  // Home = communication history only. No brand header on mobile (AppShell header
  // is hidden on mobile via hideHeader), no New Group / New Chat / Keypad buttons
@@ -17,7 +20,7 @@ export default function ChatsPage(){
   <div className="filter-tabs" role="tablist">
    {(["all","unread","favorites","groups"] as F[]).map(f=>(<button key={f} className={filter===f?"on":""} onClick={()=>setFilter(f)}>{f==="all"?"All":f==="unread"?"Unread":f==="favorites"?"Favorites":"Groups"}</button>))}
    <Link href="/archived">Archived</Link>
-   <Link href="/contacts">Contacts</Link>
+   <Link href="/contacts">Contacts{pending ? ` (${pending} pending)` : ""}</Link>
   </div>
   <RealChatList filter={filter} q={q}/>
   <div className="fab-stack"><Link href="/keypad" className="fab fab-secondary" aria-label="Keypad"><Hash size={24}/></Link><Link href="/new-chat" className="fab" aria-label="New chat"><Plus size={24}/></Link></div></div>;

@@ -54,7 +54,7 @@ export function Keypad(){
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   const [prev,setPrev]=useState<SuggestUser[]>([]);
-  useEffect(()=>{ if(!getToken()) return; (async()=>{ try{ const data=await apiJson("/api/chats?filter=all") as {chats:ChatItem[]}; let me=""; try{ me=JSON.parse(localStorage.getItem("communica_user") ?? "{}").username ?? ""; }catch{} const seen=new Set<string>(); const list:SuggestUser[]=[]; data.chats.forEach((c)=>{ if(c.chat.type!=="DIRECT") return; const o=c.members.find((m)=>m.username!==me) ?? c.members[0]; if(!o||seen.has(o.username)) return; seen.add(o.username); list.push({username:o.username,displayName:o.displayName,communicaId:o.communicaId}); }); setPrev(list); }catch{} })(); },[]);
+  useEffect(()=>{ if(!getToken()) return; (async()=>{ try{ const data=await apiJson("/api/chats?filter=all") as {chats:ChatItem[]}; let me=""; try{ me=JSON.parse(localStorage.getItem("communica_user") ?? "{}").username ?? ""; }catch{} const seen=new Set<string>(); const list:SuggestUser[]=[]; data.chats.forEach((c)=>{ if(c.chat.type!=="DIRECT") return; const o=c.members.find((m)=>m.username!==me) ?? c.members[0]; if(!o||seen.has(o.username)) return; seen.add(o.username); list.push({username:o.username,displayName:o.displayName,communicaId:o.communicaId}); }); setPrev(list); }catch(err){ try{ console.warn("keypad suggestions failed", err); }catch{} } })(); },[]);
   const lookup=async(d:string)=>{
     if(d.length!==8) return;
     try{

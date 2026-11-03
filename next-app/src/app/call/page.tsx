@@ -8,7 +8,7 @@ import { CallScreen } from "@/components/call-ui";
 //   variant — outgoing | incoming
 //   callId  — an existing ringing call (incoming accept/decline)
 // An outgoing call without a signed-in user, without a resolvable
-// real user, or to a not-accepted contact shows a plain gated error
+// real user, or to a blocked user shows a plain gated error
 // — never a simulated timer presented as a real call.
 export default function CallPage({ searchParams }: { searchParams: { to?: string; kind?: string; variant?: string; callee?: string; callId?: string } }) {
   const name = searchParams.to ?? "Unknown";

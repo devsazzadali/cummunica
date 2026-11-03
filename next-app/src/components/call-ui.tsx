@@ -1,6 +1,6 @@
 // Step 4 — Real call screen (replaces the Step 2 simulated shell).
 // Wired to browser WebRTC (src/lib/webrtc.ts) + our own signalling
-// (/api/calls REST queue, plus live Socket.io relay when the custom
+// (own /api/calls REST queue only — no Socket.io, no external service)
 // server in server.mjs is running). Uses ONLY the existing central
 // theme classes (DESIGN_HOLD: no new final colours/fonts/icons).
 // Honest behaviour, never a simulated call:
@@ -12,13 +12,13 @@
 //   after the callee accepts; the callee captures only after tapping
 //   Accept. The incoming-screen camera preview is opt-in, local
 //   only, and never attached to a peer connection.
-// - Incoming calls without a callId listen (REST poll + socket push)
-//   for a real invite; a socket push is re-verified against
+// - Incoming calls without a callId listen (REST poll)
+//   for a real invite; poll is authoritative
 //   GET /api/calls?callId=... before any accept UI appears.
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Mic, MicOff, Volume2, VolumeX, Video, VideoOff, PhoneOff, Signal, PhoneIncoming } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, Video, VideoOff, PhoneOff, Signal, PhoneIncoming, Phone } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import {
   applyOpusPreference, acquireLocalMedia, createPeerConnection, deriveQualityFromStats,
@@ -29,7 +29,7 @@ import {
   callAction, fetchCallStatus, fetchIncoming, queueSignal, readToken,
   resolveCalleeIdentifier, startCall,
 } from "@/lib/call-api";
-import type { Socket } from "socket.io-client";
+import { startRingtone, vibrateIncoming } from "@/lib/sound";
 
 type Phase = "starting" | "listening" | "ringing" | "incoming" | "connecting" | "connected" | "ended" | "error";
 
@@ -62,6 +62,7 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
   const [qualityDetail, setQualityDetail] = useState("");
   const [elapsed, setElapsed] = useState(0);
   const [previewOn, setPreviewOn] = useState(false);
+  const [autoAcceptPending, setAutoAcceptPending] = useState(false);
   const [callId, setCallId] = useState<string | null>(initialCallId ?? null);
 
   const phaseRef = useRef<Phase>("starting");
@@ -78,11 +79,11 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
   const tierIndexRef = useRef(0);
   const goodStreakRef = useRef(0);
   const connectedAtRef = useRef<number | null>(null);
-  const socketRef = useRef<Socket | null>(null);
   const calleeIdRef = useRef<string>("");
-  const socketLiveRef = useRef(false);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const autoAcceptDoneRef = useRef(false);
 
   const go = (p: Phase) => { phaseRef.current = p; setPhase(p); };
   const [authError, setAuthError] = useState(false);
@@ -103,8 +104,6 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
     pcRef.current = null;
     stopStream(localRef.current); localRef.current = null;
     stopStream(previewRef.current); previewRef.current = null;
-    try { socketRef.current?.disconnect(); } catch { /* already disconnected */ }
-    socketRef.current = null; socketLiveRef.current = false;
   }
 
   function attachLocal(stream: MediaStream): void {
@@ -114,7 +113,23 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = stream;
       remoteVideoRef.current.muted = !speaker;
+      void remoteVideoRef.current.play().catch(() => {});
     }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = stream;
+      remoteAudioRef.current.muted = !speaker;
+      void remoteAudioRef.current.play().catch(() => {});
+    }
+  }
+  function mediaErrorMessage(err: unknown): string {
+    const e = err as { name?: string; message?: string };
+    if (e?.name === "NotAllowedError" || e?.name === "SecurityError") {
+      return "Microphone/camera permission was denied. Allow mic and camera for this site in your browser settings, then try again.";
+    }
+    if (e?.name === "NotFoundError" || e?.name === "OverconstrainedError") {
+      return "No microphone/camera was found on this device, or it does not meet the requested quality. Try an audio call, or another device.";
+    }
+    return e?.message ?? "Could not start the microphone/camera.";
   }
 
   async function sendSignal(kindSig: SignalMessage["kind"], payload: Record<string, unknown>): Promise<boolean> {
@@ -122,10 +137,6 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
     const token = tokenRef.current;
     if (!id || !token) return false;
     try {
-      if (socketLiveRef.current && socketRef.current?.connected) {
-        socketRef.current.emit("call:signal", { callId: id, kind: kindSig, payload });
-        return true;
-      }
       await queueSignal(token, id, kindSig, payload);
       return true;
     } catch {
@@ -213,7 +224,7 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
       await pc.setLocalDescription(offer);
       if (!(await sendSignal("offer", offer as unknown as Record<string, unknown>))) fail("Signalling failed while starting the call.");
     } catch (err) {
-      fail(err instanceof Error ? err.message : "Could not start the microphone/camera.");
+      fail(mediaErrorMessage(err));
     }
   }
 
@@ -238,9 +249,9 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
       const pc = createPC();
       stream.getTracks().forEach((t) => pc.addTrack(t, stream));
       applyOpusPreference(pc);
-      // The caller's offer arrives via poll/socket from here on.
+      // The caller's offer arrives via poll from here on.
     } catch (err) {
-      fail(err instanceof Error ? err.message : "Could not start the microphone/camera.");
+      fail(mediaErrorMessage(err));
     }
   }
 
@@ -299,36 +310,9 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
     const next = !speaker;
     setSpeaker(next);
     if (remoteVideoRef.current) remoteVideoRef.current.muted = !next;
+    if (remoteAudioRef.current) remoteAudioRef.current.muted = !next;
   }
 
-  // Socket: best-effort live relay. If the custom server is not
-  // running, connection fails quietly and REST polling carries the
-  // call — the user is never blocked on the socket.
-  function connectSocket(token: string): void {
-    import("socket.io-client").then(({ io }) => {
-      if (endedRef.current) return;
-      const socket = io(undefined, { auth: { token }, reconnectionAttempts: 3, timeout: 4000 });
-      socketRef.current = socket;
-      socket.on("connect", () => {
-        socketLiveRef.current = true;
-        const id = callIdRef.current;
-        if (id && roleRef.current === "caller" && calleeIdRef.current !== "") {
-          socket.emit("call:register", { callId: id, calleeId: calleeIdRef.current });
-        }
-      });
-      socket.on("disconnect", () => { socketLiveRef.current = false; });
-      socket.on("call:signal", (msg: unknown) => { void handleSignal(msg); });
-      socket.on("call:incoming", async (msg: { callId?: string }) => {
-        if (phaseRef.current !== "listening" || typeof msg.callId !== "string") return;
-        try {
-          const st = await fetchCallStatus(token, msg.callId);
-          if (st.status === "ringing") {
-            callIdRef.current = msg.callId; setCallId(msg.callId); go("incoming");
-          }
-        } catch { /* forged/expired push: ignore, poll stays authoritative */ }
-      });
-    }).catch(() => undefined);
-  }
 
   // One-time start: resolve + invite (outgoing), verify + wait
   // (incoming with callId), or listen (incoming without callId).
@@ -336,7 +320,7 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
     const token = readToken();
     tokenRef.current = token;
     if (!token) {
-      setAuthError(true); setError("Sign in to place or receive a real call. Calls only go to contacts who have accepted you.");
+      setAuthError(true); setError("Sign in to place or receive a real call.");
       go("error");
       return;
     }
@@ -348,7 +332,15 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
         try {
           const st = await fetchCallStatus(token, initialCallId);
           if (cancelled) return;
-          if (st.status === "ringing") { callIdRef.current = initialCallId; setCallId(initialCallId); go("incoming"); }
+          if (st.status === "ringing") {
+            callIdRef.current = initialCallId; setCallId(initialCallId); go("incoming");
+            try {
+              if (sessionStorage.getItem("communica_auto_accept") === initialCallId) {
+                sessionStorage.removeItem("communica_auto_accept");
+                setAutoAcceptPending(true);
+              }
+            } catch {}
+          }
           else finish(OUTCOME_TEXT[st.status] ?? "This call is no longer active.");
         } catch {
           if (!cancelled) fail("Could not load this incoming call. It may already have ended.");
@@ -361,7 +353,7 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
       let meUser = ""; let meId = "";
       try { const u = JSON.parse(localStorage.getItem("communica_user") ?? "{}"); meUser = (u.username ?? "").toLowerCase(); meId = u.communicaId ?? ""; } catch {}
       if (query.trim().toLowerCase().replace(/^@/, "") === meUser || (meId && query.trim() === meId)) {
-        fail("This is your own account — you cannot call yourself. Call another registered user who has accepted you as a contact.");
+        fail("This is your own account — you cannot call yourself. Call another registered user.");
         return;
       }
       let identifier: string | null = null;
@@ -372,7 +364,7 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
       }
       if (cancelled) return;
       if (!identifier) {
-        fail(`Could not find "${query}" as a registered Communica user. That account has not registered on this app yet, or the name/ID is wrong — ask them to register first, then send a contact request and wait for acceptance before calling.`);
+        fail(`Could not find "${query}" as a registered Communica user. That account has not registered on this app yet, or the name/ID is wrong — ask them to register first, then call them directly with their Communica ID or username.`);
         return;
       }
       try {
@@ -382,15 +374,11 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
         if (!started.callId) { fail("The call could not be started. Try again."); return; }
         callIdRef.current = started.callId; setCallId(started.callId);
         if (started.calleeId) calleeIdRef.current = started.calleeId;
-        if (socketRef.current?.connected && started.calleeId) {
-          socketRef.current.emit("call:register", { callId: started.callId, calleeId: started.calleeId });
-          socketRef.current.emit("call:notify", { callId: started.callId, calleeId: started.calleeId, type: kind === "video" ? "VIDEO" : "AUDIO" });
-        }
         go("ringing");
       } catch (err) {
         const status = (err as { status?: number }).status;
         if (status === 403) {
-          fail("This contact has not accepted you yet, or has blocked calls. Calls are only allowed to accepted contacts.");
+          fail("This user blocked calls from you, or you blocked this user. Unblock to call again.");
         } else if (status === 401) {
           fail("Your sign-in expired. Sign in again and retry the call.", true);
         } else {
@@ -439,6 +427,28 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
+
+  // Incoming ringtone + vibration: starts on the incoming screen, stops
+  // on accept / decline / end / unmount. No ringtone existed before —
+  // the callee only saw a tiny banner, with no sound at all.
+  useEffect(() => {
+    if (phase !== "incoming") return;
+    const stop = startRingtone();
+    vibrateIncoming();
+    return () => { stop(); };
+  }, [phase]);
+
+  // Single-tap answer from the fullscreen banner: the banner sets
+  // sessionStorage, then navigates here; this effect accepts once.
+  // If permission is denied, acceptIncoming fails with a clear
+  // message and the manual Accept button stays usable.
+  useEffect(() => {
+    if (phase !== "incoming" || !autoAcceptPending || autoAcceptDoneRef.current) return;
+    autoAcceptDoneRef.current = true;
+    const t = window.setTimeout(() => { void acceptIncoming(); }, 300);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, autoAcceptPending]);
 
   // Call timer: runs ONLY after the connection reports "connected".
   useEffect(() => {
@@ -524,6 +534,7 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
 
   useEffect(() => {
     if (remoteVideoRef.current) remoteVideoRef.current.muted = !speaker;
+    if (remoteAudioRef.current) remoteAudioRef.current.muted = !speaker;
   }, [speaker]);
 
   if (phase === "error") {
@@ -554,9 +565,36 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
       <div className="call-shell">
         <PhoneIncoming size={48} />
         <h2>Waiting for an incoming call</h2>
-        <p>Listening for a real invite from an accepted contact. Nothing is simulated here — when someone calls you, Accept / Decline will appear.</p>
+        <p>Listening for a real invite. When someone calls you, Accept / Decline will appear here — you do not need to accept them as a contact first.</p>
         <p className="call-timer">Calls are in-app only. The dialled ID is an in-app Communica ID, never a phone number.</p>
         <Link className="btn btn-light" href="/calls">Back to Calls</Link>
+      </div>
+    );
+  }
+
+  if (phase === "incoming") {
+    return (
+      <div className="call-shell call-incoming-full">
+        <Avatar name={name} size={180} />
+        <h2>{name}</h2>
+        <p className="call-incoming-label">Incoming {kind} call</p>
+        <p className="call-timer">{autoAcceptPending ? "Answering…" : "Tap Accept to answer, Decline to reject."}</p>
+        {kind === "video" ? (
+          <div className="video-placeholder">
+            <video ref={localVideoRef} autoPlay playsInline muted style={{ width: "100%", maxWidth: 280 }} aria-label="Local video preview" />
+            {previewOn ? null : <p>Your camera preview appears here after you tap Accept. No camera is sent before Accept.</p>}
+          </div>
+        ) : (
+          <audio ref={remoteAudioRef} autoPlay playsInline style={{ width: 1, height: 1, opacity: 0, position: "absolute" }} aria-label="Remote audio" />
+        )}
+        <div className="call-answer-big">
+          <button type="button" className="call-big-btn call-big-accept" aria-label="Accept call" onClick={() => void acceptIncoming()}><Phone size={36} /><span>Accept</span></button>
+          <button type="button" className="call-big-btn call-big-decline" aria-label="Decline call" onClick={() => void declineIncoming()}><PhoneOff size={36} /><span>Decline</span></button>
+        </div>
+        {kind === "video" && !autoAcceptPending ? (
+          <button type="button" className="btn btn-light" onClick={() => void togglePreview()}>{previewOn ? "Stop camera preview" : "Enable camera preview"}</button>
+        ) : null}
+        <p className="call-timer">No microphone or camera is captured until you tap Accept.</p>
       </div>
     );
   }
@@ -564,7 +602,6 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
   const statusText =
     phase === "starting" ? "Starting…" :
     phase === "ringing" ? `Ringing… waiting for ${name} to accept (30 seconds)` :
-    phase === "incoming" ? `Incoming ${kind} call` :
     phase === "connecting" ? "Connecting…" :
     `In call — ${kind} (in-app only)`;
 
@@ -584,18 +621,8 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
           {phase !== "connected" && phase !== "connecting" ? <p>Video appears here once the call connects. No camera is started before accept.</p> : null}
         </div>
       ) : (
-        <video ref={remoteVideoRef} autoPlay playsInline style={{ display: "none" }} aria-label="Remote audio" />
+        <audio ref={remoteAudioRef} autoPlay playsInline style={{ width: 1, height: 1, opacity: 0, position: "absolute" }} aria-label="Remote audio" />
       )}
-      {phase === "incoming" ? (
-        <div className="call-answer-row">
-          <button type="button" className="btn btn-green" onClick={() => void acceptIncoming()}>Accept call</button>
-          <button type="button" className="btn btn-danger" onClick={() => void declineIncoming()}>Decline call</button>
-          {kind === "video" ? <button type="button" className="btn btn-light" onClick={() => void togglePreview()}>{previewOn ? "Stop camera preview" : "Enable camera preview"}</button> : null}
-        </div>
-      ) : null}
-      {phase === "incoming" ? (
-        <p className="call-timer">No microphone or camera is captured until you tap Accept. The preview above is local only and is never sent to the other person.</p>
-      ) : null}
       {phase === "connected" || phase === "connecting" || phase === "ringing" ? (
         <div className="call-controls">
           <button type="button" className={muted ? "call-btn call-btn-on" : "call-btn"} aria-label={muted ? "Unmute" : "Mute"} onClick={toggleMute} disabled={phase !== "connected"}>{muted ? <MicOff size={22} /> : <Mic size={22} />}<span>{muted ? "Muted" : "Mute"}</span></button>

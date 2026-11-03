@@ -237,6 +237,44 @@ model CallLog {
   @@index([calleeId, startedAt])
 }
 
+// Live call state — DATABASE-backed, NOT in-memory.
+// Reason (2026-11-03, live proof): Vercel serverless runs many
+// separate function instances. The old module-level Map lived in ONE
+// instance only, so a ringing call seen by the banner on one instance
+// was "not a party / already ended" on the /call page on another
+// instance. Every request now reads/writes these tables, so any
+// instance sees the same call. User decision 2026-11-03: NO accept
+// gate — anyone with the ID/username can call; only Block stops a
+// caller. ActiveCall rows with a final status are kept 10 minutes
+// so a polling peer learns DECLINED/CANCELLED/MISSED/ENDED instead
+// of a bare "gone", then swept.
+model ActiveCall {
+  id          String   @id
+  callerId    String
+  calleeId    String
+  chatId      String?
+  type        CallType
+  status      String   @default("RINGING")
+  ringingSince DateTime @default(now())
+  startedAt   DateTime?
+  callLogId   String?
+  updatedAt   DateTime @updatedAt
+
+  @@index([calleeId, status])
+  @@index([callerId, status])
+}
+
+model CallSignal {
+  id        String   @id @default(cuid())
+  callId    String
+  toUserId  String
+  kind      String
+  payload   Json
+  createdAt DateTime @default(now())
+
+  @@index([callId, toUserId])
+}
+
 // SAZMU AI companion settings, per user. The chatbot itself is a system contact
 // in the app (labelled AI), not a row in User — so it can never be confused with a human.
 model CompanionSetting {

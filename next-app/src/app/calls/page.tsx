@@ -10,7 +10,7 @@ export default function CallsPage(){
  useEffect(()=>{ try{ setMe(JSON.parse(localStorage.getItem("communica_user")??"{}").username??""); }catch{} (async()=>{ try{ const d=await apiJson("/api/calls") as {calls:CallRow[]}; setCalls(d.calls); }catch(err){ setError(err instanceof Error?err.message:"failed to load calls"); } })(); },[]);
  return <AppShell requireLogin active="Calls"><header className="topbar"><h1>Calls</h1><div className="topbar-actions"><Link className="icon-btn" href="/keypad" aria-label="Keypad"><Hash size={22}/></Link></div></header>
  <div className="wrap"><p><Link className="btn btn-light" href="/call?kind=audio&variant=incoming">Listen for a real incoming audio call</Link> <Link className="btn btn-light" href="/call?kind=video&variant=incoming">Listen for a real incoming video call</Link></p>
-  <p>Only real CallLog rows are listed below. A call only connects to a real user who has accepted you as a contact; otherwise the call screen says so plainly instead of simulating a call.</p></div>
+  <p>Only real CallLog rows are listed below. Anyone can call anyone directly with a Communica ID or username — no contact acceptance is needed. A blocked user cannot call you, and the call screen says so plainly instead of simulating a call.</p></div>
  <h2 style={{padding:"0 16px"}}>Recent Calls</h2>
  {error?<div className="wrap"><p role="alert">{error}</p><p><Link className="btn btn-green" href="/login">Login</Link></p></div>:calls===null?<p className="empty">Loading calls…</p>:!calls.length?<p className="empty">No calls yet.</p>:
  <div className="chat-list">{calls.map(c=>{ const other=c.caller.username===me?c.callee:c.caller; const Icon=c.status==="MISSED"?PhoneMissed:c.caller.username===me?PhoneOutgoing:PhoneIncoming; return (

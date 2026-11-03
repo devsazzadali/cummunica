@@ -328,3 +328,18 @@ h1{font-size:var(--t-h1-size);font-weight:var(--t-h1-weight);letter-spacing:var(
 .chat-view{flex:1;min-height:0}
 .chat-bg{flex:1;min-height:0}
 .composer .icon-btn-send{width:44px;height:44px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
+
+.topbar-page{background:var(--t-surface);color:var(--t-text);border-bottom:1px solid var(--t-border)}.topbar-page h1{color:var(--t-text)}.topbar-page .icon-btn{color:var(--t-icon)}
+
+/* Fullscreen incoming call (2026-11-03): banner overlay + call screen.
+   Old tiny sidebar banner replaced — this must be unmissable. */
+.call-banner-full{position:fixed;inset:0;z-index:999;background:#111827;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
+.call-banner-full h2{font-size:28px;margin:0}
+.call-incoming-label{font-size:20px;font-weight:700;margin:0}
+.call-incoming-full{min-height:100dvh;background:#111827;color:#fff}
+.call-answer-big{display:flex;gap:32px;justify-content:center;margin:16px 0;flex-wrap:wrap}
+.call-big-btn{display:flex;flex-direction:column;align-items:center;gap:6px;width:92px;height:92px;border-radius:50%;border:0;cursor:pointer;color:#fff;font-weight:700;padding:14px}
+.call-big-btn span{font-size:14px}
+.call-big-accept{background:#22C55E}
+.call-big-decline{background:#DC2626}
+.call-banner-full .call-timer{color:#E5E7EB;opacity:.9}

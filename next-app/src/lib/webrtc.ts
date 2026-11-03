@@ -17,9 +17,10 @@
 //   Perfect quality on a bad network is NOT promised.
 //
 // SAFETY / GATES:
-// - The accepted-contact gate is enforced SERVER-side (/api/calls
-//   start, and the socket server's register step). This client file
-//   never decides who may be called.
+// - NO accept gate (user decision 2026-11-03): anyone with the ID /
+//   username can call. The ONLY call gate is Block, enforced
+//   SERVER-side (/api/calls start). This client file never decides
+//   who may be called.
 // - No media is sent before accept: the caller acquires media and
 //   creates an offer ONLY after the callee accepts (polled via
 //   GET /api/calls?callId=... or a call:accepted socket event), and

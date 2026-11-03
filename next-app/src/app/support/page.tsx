@@ -28,7 +28,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How do audio and video calls work? Can I call anyone?",
-    a: "Calls in Communica are in-app only, over the internet — they are not phone calls and never use your phone number. You can call only contacts who have accepted you, and not someone who has blocked you. Audio uses the Opus codec with echo cancellation, noise suppression and automatic gain, and video aims for HD (1280×720 at 30 fps) with a graceful fallback on a weak connection; audio is prioritised over video when the network is weak.",
+    a: "Calls in Communica are in-app only, over the internet — they are not phone calls and never use your phone number. You can call anyone directly if you know their Communica ID or username — no contact acceptance is needed. Someone who blocked you (or whom you blocked) cannot call you. Audio uses the Opus codec with echo cancellation, noise suppression and automatic gain, and video aims for HD (1280×720 at 30 fps) with a graceful fallback on a weak connection; audio is prioritised over video when the network is weak.",
   },
   {
     q: "What is SAZMU AI? Is it a real person?",
@@ -114,7 +114,7 @@ export default function SupportPage() {
 
   return (
     <AppShell active="Settings">
-      <header className="topbar"><h1>Support</h1></header>
+      <header className="topbar topbar-page"><h1>Support</h1></header>
       <div className="wrap">
         <p className="support-intro"><LifeBuoy size={22} /> Get help with Communica, or report a problem. Start with the answers below — most questions are answered there.</p>
 
