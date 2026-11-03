@@ -67,6 +67,7 @@ export default function SettingsPage(){
   </div>
   {themeSaved?<p role="status">Theme saved to the server.</p>:null}
   <p style={{display:"flex",flexDirection:"column",gap:10}}>
+   <Link className="btn btn-light btn-full" href="/contacts">Contacts &amp; requests (Accept here)</Link>
    <Link className="btn btn-light btn-full" href="/sazmu/setup"><Bot size={22}/> SAZMU AI settings</Link>
    <Link className="btn btn-light btn-full" href="/archived"><Archive size={22}/> Archived chats</Link>
    <Link className="btn btn-light btn-full" href="/favorites"><Star size={22}/> Favorites</Link>

@@ -59,6 +59,14 @@ export async function POST(request: Request) {
     });
     if (existing !== null) throw conflict("contact already exists");
     const row = await prisma.contact.create({ data: { ownerId: auth.userId, contactUserId, accepted: false } });
+    // ACCEPT-FIX (2026-11-03): a request must be visible to the target,
+    // otherwise nobody can ever accept it from the UI. Mirror a pending
+    // row for the target (accepted=false). Accepting that row is what
+    // the call gate checks: owner=callee, contactUser=caller, accepted=true.
+    try {
+      const targetRow = await prisma.contact.findUnique({ where: { ownerId_contactUserId: { ownerId: contactUserId, contactUserId: auth.userId } } });
+      if (targetRow === null) await prisma.contact.create({ data: { ownerId: contactUserId, contactUserId: auth.userId, accepted: false } });
+    } catch {}
     return json({ contact: { accepted: row.accepted, isFavorite: row.isFavorite, isBlocked: row.isBlocked } }, 201);
   } catch (err) {
     return handleError(err);
