@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Phone, Video, Send, Paperclip, Mic, Star, Heart, MoreVertical, Smile, Camera, File as FileIcon, Image as ImageIcon, X } from "lucide-react";
+import { ArrowLeft, Phone, Video, Send, Paperclip, Mic, Star, Heart, MoreVertical, Smile, Camera, File as FileIcon, Image as ImageIcon, X, Play, Pause } from "lucide-react";
 import { Avatar, Ticks } from "@/components/ui";
 import { apiJson, chatTitle, getToken, uploadFile, type ChatItem, type Msg } from "@/lib/api-client";
 import { playSendSound, playReceiveSound, notifyMessage } from "@/lib/sound";
@@ -11,6 +11,44 @@ function fmt(t: string): string {
 }
 function meUsername(): string {
   try { const u = JSON.parse(localStorage.getItem("communica_user") ?? "{}"); return u.username ?? ""; } catch { return ""; }
+}
+
+
+function fmtVoice(sec: number): string {
+  if (!isFinite(sec) || sec < 0) return "0:00";
+  const m = Math.floor(sec / 60); const r = Math.floor(sec % 60);
+  return `${m}:${r.toString().padStart(2, "0")}`;
+}
+function VoicePlayer({ src, fallbackSec }: { src: string; fallbackSec: number | null }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [cur, setCur] = useState(0);
+  const [dur, setDur] = useState<number>(fallbackSec ?? 0);
+  const [err, setErr] = useState(false);
+  const fixedRef = useRef(false);
+  const onMeta = () => {
+    const a = audioRef.current; if (!a) return;
+    // MediaRecorder WebM often reports duration Infinity/0 in Chrome.
+    // Seek-to-end trick forces the browser to compute the real duration.
+    if (!isFinite(a.duration) && !fixedRef.current) {
+      fixedRef.current = true;
+      try { a.currentTime = 1e7; } catch {}
+      return;
+    }
+    if (isFinite(a.duration) && a.duration > 0) {
+      if (fixedRef.current) { try { a.currentTime = 0; a.pause(); setPlaying(false); } catch {} }
+      setDur(a.duration);
+    }
+  };
+  if (err) return <span>Voice could not be played. <a href={src} target="_blank" rel="noreferrer">Download voice</a></span>;
+  return <span style={{ display: "inline-flex", alignItems: "center", gap: 8, maxWidth: "100%" }}>
+    <button type="button" className="icon-btn" aria-label={playing ? "Pause voice" : "Play voice"} onClick={async () => { const a = audioRef.current; if (!a) return; if (playing) { a.pause(); setPlaying(false); } else { try { await a.play(); setPlaying(true); } catch { setErr(true); } } }}>{playing ? <Pause size={20} /> : <Play size={20} />}</button>
+    <span style={{ flex: 1, minWidth: 80, height: 6, background: "rgba(0,0,0,0.15)", borderRadius: 3, overflow: "hidden" }}><span style={{ display: "block", height: "100%", width: dur > 0 ? `${Math.min(100, (cur / dur) * 100)}%` : "0%", background: "var(--t-accent, #5B21B6)" }} /></span>
+    <span style={{ fontSize: 13, whiteSpace: "nowrap" }}>{fmtVoice(cur)} / {fmtVoice(dur)}</span>
+    <audio ref={audioRef} src={src} preload="metadata" style={{ display: "none" }}
+      onLoadedMetadata={onMeta} onDurationChange={onMeta} onTimeUpdate={() => { const a = audioRef.current; if (a) setCur(a.currentTime); }}
+      onEnded={() => setPlaying(false)} onError={() => setErr(true)} />
+  </span>;
 }
 
 export function RealChatList({ filter, archived, activeId, q }: { filter?: "all" | "unread" | "favorites" | "groups"; archived?: boolean; activeId?: string; q?: string }) {
@@ -72,12 +110,20 @@ export function RealChat({ chatId, group }: { chatId: string; group: boolean }) 
   const [cameraError, setCameraError] = useState("");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const camStreamRef = useRef<MediaStream | null>(null);
+  const [camFacing, setCamFacing] = useState<"environment" | "user">("environment");
+  const [camReady, setCamReady] = useState(false);
+  const recStartRef = useRef<number>(0);
   const seenRef = useRef<Set<string>>(new Set());
   const [myId, setMyId] = useState("");
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const sinceRef = useRef<string>("");
 
+  useEffect(() => {
+    if (!cameraOpen) return;
+    const v = videoRef.current; const st = camStreamRef.current;
+    if (v && st) { v.srcObject = st; v.play().then(() => setCamReady(true)).catch(() => {}); }
+  }, [cameraOpen]);
   const loadChat = useCallback(async () => {
     const data = await apiJson("/api/chats") as { chats: ChatItem[] };
     const found = data.chats.find((c) => c.chat.id === chatId) ?? null;
@@ -120,14 +166,14 @@ export function RealChat({ chatId, group }: { chatId: string; group: boolean }) 
     } catch (err) { setError(err instanceof Error ? err.message : "send failed — message was not sent"); }
     setBusy(false);
   };
-  const sendMedia = async (file: File, forcedType?: string, fileText?: string) => {
+  const sendMedia = async (file: File, forcedType?: string, fileText?: string, durationSec?: number) => {
     setError("");
     const normMime = file.type.startsWith("audio/webm") ? "audio/webm" : file.type.startsWith("audio/mp4") ? "audio/mp4" : file.type.startsWith("audio/ogg") ? "audio/ogg" : file.type;
     const kindFromMime = normMime.startsWith("image/") ? "PHOTO" : normMime.startsWith("audio/") ? "VOICE" : normMime.startsWith("video/") ? "VIDEO" : "FILE";
     const type = forcedType ?? kindFromMime;
     try {
       const up = await uploadFile(file);
-      const data = await apiJson("/api/messages", { method: "POST", body: { chatId, type: up.kind, mediaUrl: up.url, mediaMime: up.mime, text: fileText ?? null } }) as { message: Msg };
+      const data = await apiJson("/api/messages", { method: "POST", body: { chatId, type: up.kind, mediaUrl: up.url, mediaMime: up.mime, text: fileText ?? null, durationSec: durationSec ?? null } }) as { message: Msg };
       setMsgs((prev) => [...prev, data.message]); sinceRef.current = data.message.createdAt; playSendSound();
     } catch (err) {
       // Own-system fallback for Vercel: /api/media writes to server-local
@@ -137,7 +183,7 @@ export function RealChat({ chatId, group }: { chatId: string; group: boolean }) 
       if (file.size > 5 * 1024 * 1024) { setError(err instanceof Error ? err.message : "media send failed — file was not sent as a message"); return; }
       try {
         const dataUrl: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("could not read file")); r.readAsDataURL(file); });
-        const data = await apiJson("/api/messages", { method: "POST", body: { chatId, type, mediaUrl: dataUrl, mediaMime: normMime, text: fileText ?? null } }) as { message: Msg };
+        const data = await apiJson("/api/messages", { method: "POST", body: { chatId, type, mediaUrl: dataUrl, mediaMime: normMime, text: fileText ?? null, durationSec: durationSec ?? null } }) as { message: Msg };
         setMsgs((prev) => [...prev, data.message]); sinceRef.current = data.message.createdAt; playSendSound();
       } catch (err2) { setError(err2 instanceof Error ? err2.message : "media send failed — file was not sent as a message"); }
     }
@@ -157,25 +203,33 @@ export function RealChat({ chatId, group }: { chatId: string; group: boolean }) 
         const base = rec.mimeType.startsWith("audio/webm") ? "audio/webm" : rec.mimeType.startsWith("audio/mp4") ? "audio/mp4" : rec.mimeType.startsWith("audio/ogg") ? "audio/ogg" : "audio/webm";
         const ext = base === "audio/mp4" ? "m4a" : base === "audio/ogg" ? "ogg" : "webm";
         const blob = new Blob(chunksRef.current, { type: base });
-        if (blob.size) void sendMedia(new File([blob], `voice.${ext}`, { type: base }), "VOICE");
+        const durSec = Math.max(0, Math.round((Date.now() - recStartRef.current) / 1000));
+        // Never send an empty / too-short recording as a 0:00 bubble.
+        if (blob.size < 2000 || durSec < 1) { setError("Voice was too short or empty — it was NOT sent. Speak for at least a second, then tap the mic again to stop and send."); return; }
+        void sendMedia(new File([blob], `voice.${ext}`, { type: base }), "VOICE", undefined, durSec);
       };
-      recRef.current = rec; rec.start(); setRecording(true);
+      recRef.current = rec; recStartRef.current = Date.now(); rec.start(); setRecording(true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "";
       setError(/denied|permission/i.test(msg) ? "Microphone permission denied — allow the microphone and try again." : "Microphone could not be started — voice message was not recorded.");
     }
   };
-  const openCamera = async () => {
-    setCameraError("");
+  const openCamera = async (facing: "environment" | "user" = "environment") => {
+    setCameraError(""); setCamReady(false); setCamFacing(facing);
     try {
       if (!navigator.mediaDevices?.getUserMedia) { document.getElementById("chat-camera")?.click(); return; }
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      camStreamRef.current?.getTracks().forEach((t) => t.stop());
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } } });
       camStreamRef.current = stream; setCameraOpen(true);
-      setTimeout(() => { if (videoRef.current) videoRef.current.srcObject = stream; }, 50);
+      // Attach in the cameraOpen effect too (render race was the black-preview bug);
+      // attach here as well in case the video element is already mounted.
+      const v = videoRef.current; if (v) { v.srcObject = stream; v.play().then(() => setCamReady(true)).catch(() => {}); }
     } catch { document.getElementById("chat-camera")?.click(); }
   };
+  const switchCamera = () => { void openCamera(camFacing === "environment" ? "user" : "environment"); };
   const capturePhoto = () => {
     const video = videoRef.current; if (!video) return;
+    if (!video.videoWidth || !video.videoHeight) { setCameraError("Camera frame is not ready yet — wait a second for the preview to appear, then try again. A black photo will not be sent."); return; }
     const canvas = document.createElement("canvas"); canvas.width = video.videoWidth || 640; canvas.height = video.videoHeight || 480;
     const ctx = canvas.getContext("2d"); if (!ctx) return; ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     canvas.toBlob((blob) => {
@@ -184,7 +238,7 @@ export function RealChat({ chatId, group }: { chatId: string; group: boolean }) 
       void sendMedia(new File([blob], "camera.jpg", { type: "image/jpeg" }), "PHOTO");
     }, "image/jpeg", 0.9);
   };
-  const closeCamera = () => { camStreamRef.current?.getTracks().forEach((t) => t.stop()); camStreamRef.current = null; setCameraOpen(false); };
+  const closeCamera = () => { camStreamRef.current?.getTracks().forEach((t) => t.stop()); camStreamRef.current = null; setCameraOpen(false); setCamReady(false); };
   const react = async (m: Msg, emoji: string) => {
     try { await apiJson("/api/reactions", { method: "POST", body: { chatId, messageId: m.id, emoji } }); void loadMsgs(); } catch (err) { setError(err instanceof Error ? err.message : "reaction failed"); }
   };
@@ -243,7 +297,7 @@ export function RealChat({ chatId, group }: { chatId: string; group: boolean }) 
         <div className="chat-menu-wrap"><button type="button" className="icon-btn" aria-label="More options" onClick={() => setMenuOpen(!menuOpen)}><MoreVertical size={22} /></button>{menuOpen ? <div className="chat-menu"><Link href="/new-group" onClick={() => setMenuOpen(false)}>New group</Link>{other ? <button type="button" onClick={() => { setMenuOpen(false); void addContact(); }}>Add to contacts</button> : null}<button type="button" onClick={() => { setMenuOpen(false); setShowMedia(false); setShowSearch(!showSearch); }}>Search in chat</button><button type="button" onClick={() => { setMenuOpen(false); setShowSearch(false); setShowMedia(!showMedia); }}>Media, links, and docs</button><Link href="/settings" onClick={() => setMenuOpen(false)}>Chat theme</Link>{other ? <Link href={`/contacts/${other.username}`} onClick={() => setMenuOpen(false)}>View contact</Link> : null}{group ? <Link href={`/groups/${chatId}/info`} onClick={() => setMenuOpen(false)}>Group info</Link> : null}<button type="button" onClick={() => { setMenuOpen(false); void favChat(); }}>Favourite</button><button type="button" onClick={() => { setMenuOpen(false); void archiveChat(true); }}>Archive</button>{other ? <button type="button" onClick={() => { setMenuOpen(false); void blockChat(); }}>Block</button> : null}</div> : null}</div>
       </div>
     </header>
-    <div className="chat-view">{contactMsg ? <p className="chat-panel" role="status">{contactMsg}</p> : null}{showSearch ? <div className="chat-panel"><input value={chatSearch} onChange={(e) => setChatSearch(e.target.value)} placeholder="Search in this chat…" aria-label="Search in this chat" /><button type="button" className="btn btn-light" onClick={() => { setChatSearch(""); setShowSearch(false); }}>Close</button>{chatSearch.trim() !== "" ? <span>{displayMsgs.length} match{displayMsgs.length === 1 ? "" : "es"} in loaded messages</span> : null}</div> : null}{showMedia ? <div className="chat-panel"><h3>Media</h3>{msgs.filter((m) => m.mediaUrl).length ? <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{msgs.filter((m) => m.mediaUrl).map((m) => (<span key={m.id}>{m.type === "PHOTO" && m.mediaUrl ? <img src={m.mediaUrl} alt="Shared photo" style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 8 }} /> : m.type === "VIDEO" && m.mediaUrl ? <video src={m.mediaUrl} style={{ width: 120, borderRadius: 8 }} controls /> : m.type === "VOICE" && m.mediaUrl ? <audio src={m.mediaUrl} controls style={{ maxWidth: 200 }} /> : null}</span>))}</div> : <p>No media shared yet.</p>}<h3>Links</h3>{(() => { const links: string[] = []; msgs.forEach((m) => { const found = (m.text ?? "").match(/https?:\/\/[^\s]+/g); if (found) links.push(...found); }); return links.length ? <ul>{links.map((u, i) => (<li key={i}><a href={u} target="_blank" rel="noreferrer">{u}</a></li>))}</ul> : <p>No links shared yet.</p>; })()}<h3>Docs</h3><p>No documents shared yet — Communica messages support photos, voice and video only.</p><button type="button" className="btn btn-light" onClick={() => setShowMedia(false)}>Close</button></div> : null}<div className="chat-bg">
+    <div className="chat-view">{contactMsg ? <p className="chat-panel" role="status">{contactMsg}</p> : null}{showSearch ? <div className="chat-panel"><input value={chatSearch} onChange={(e) => setChatSearch(e.target.value)} placeholder="Search in this chat…" aria-label="Search in this chat" /><button type="button" className="btn btn-light" onClick={() => { setChatSearch(""); setShowSearch(false); }}>Close</button>{chatSearch.trim() !== "" ? <span>{displayMsgs.length} match{displayMsgs.length === 1 ? "" : "es"} in loaded messages</span> : null}</div> : null}{showMedia ? <div className="chat-panel"><h3>Media</h3>{msgs.filter((m) => m.mediaUrl).length ? <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{msgs.filter((m) => m.mediaUrl).map((m) => (<span key={m.id}>{m.type === "PHOTO" && m.mediaUrl ? <img src={m.mediaUrl} alt="Shared photo" style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 8 }} /> : m.type === "VIDEO" && m.mediaUrl ? <video src={m.mediaUrl} style={{ width: 120, borderRadius: 8 }} controls /> : m.type === "VOICE" && m.mediaUrl ? <VoicePlayer src={m.mediaUrl} fallbackSec={m.durationSec} /> : null}</span>))}</div> : <p>No media shared yet.</p>}<h3>Links</h3>{(() => { const links: string[] = []; msgs.forEach((m) => { const found = (m.text ?? "").match(/https?:\/\/[^\s]+/g); if (found) links.push(...found); }); return links.length ? <ul>{links.map((u, i) => (<li key={i}><a href={u} target="_blank" rel="noreferrer">{u}</a></li>))}</ul> : <p>No links shared yet.</p>; })()}<h3>Docs</h3><p>No documents shared yet — Communica messages support photos, voice and video only.</p><button type="button" className="btn btn-light" onClick={() => setShowMedia(false)}>Close</button></div> : null}<div className="chat-bg">
       {!msgs.length && !error ? <p className="empty">No messages yet — send the first message below.</p> : null}{msgsWithDate.map(({ m, showDate }) => {
         const mine = m.senderId === myId;
         const senderName = m.sender?.displayName ?? (mine ? "You" : "");
@@ -252,7 +306,7 @@ export function RealChat({ chatId, group }: { chatId: string; group: boolean }) 
           {m.deletedForAll ? <span><em>This message was deleted</em></span> : <>
             {m.replyToId ? <span style={{ fontSize: 13, opacity: 0.8 }}>Replying to a message</span> : null}
             {m.type === "PHOTO" && m.mediaUrl ? <><img src={m.mediaUrl} alt="Shared photo" style={{ maxWidth: "100%", borderRadius: 8 }} /><br /></> : null}
-            {m.type === "VOICE" && m.mediaUrl ? <><audio controls src={m.mediaUrl} style={{ maxWidth: "100%" }} /><br /></> : null}
+            {m.type === "VOICE" && m.mediaUrl ? <><VoicePlayer src={m.mediaUrl} fallbackSec={m.durationSec} /><br /></> : null}
             {m.type === "VIDEO" && m.mediaUrl ? <><video controls src={m.mediaUrl} style={{ maxWidth: "100%" }} /><br /></> : null}
             {m.type === "FILE" ? <span><FileIcon size={16} /> {m.text ?? "File"}{m.mediaUrl ? <> — <a href={m.mediaUrl} target="_blank" rel="noreferrer">Download</a></> : null}</span> : <span>{m.text}</span>}
           </>}
@@ -272,7 +326,13 @@ export function RealChat({ chatId, group }: { chatId: string; group: boolean }) 
     </div>
     {emojiOpen ? <div className="emoji-picker">{["😊", "❤️", "👍", "😂", "🙏", "🎉", "😢", "🔥", "👋", "✅", "🌸", "🙌"].map((e) => (<button key={e} type="button" aria-label="Insert emoji" onClick={() => { setText(text + e); setEmojiOpen(false); }}>{e}</button>))}</div> : null}
     {recording ? <p className="chat-panel" role="status">Recording voice… tap the mic again to stop and send.</p> : null}
-    {cameraOpen ? <div className="chat-panel" style={{flexDirection:"column",alignItems:"stretch"}}><video ref={videoRef} autoPlay playsInline muted style={{width:"100%",borderRadius:12,background:"#000"}} /><p style={{display:"flex",gap:8,flexWrap:"wrap"}}><button type="button" className="btn btn-green" onClick={capturePhoto}>Take photo &amp; send</button><button type="button" className="btn btn-light" onClick={closeCamera}>Cancel</button></p>{cameraError ? <p role="alert">{cameraError}</p> : null}</div> : null}
+    {cameraOpen ? <div style={{ position: "fixed", inset: 0, zIndex: 90, background: "#000", display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 12, color: "#fff" }}><span>{camReady ? "Camera ready" : "Starting camera…"}</span><button type="button" className="btn btn-light" onClick={closeCamera}>✕ Close</button></div>
+      <video ref={videoRef} autoPlay playsInline muted onPlaying={() => setCamReady(true)} style={{ flex: 1, width: "100%", height: "100%", objectFit: "cover", background: "#000" }} />
+      {!camReady ? <p style={{ color: "#fff", textAlign: "center", padding: 12 }}>If the preview stays black, check camera permission for this site, then try Switch camera.</p> : null}
+      {cameraError ? <p role="alert" style={{ color: "#fff", padding: "0 16px" }}>{cameraError}</p> : null}
+      <p style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", padding: 16 }}><button type="button" className="btn btn-green" onClick={capturePhoto}>Take photo &amp; send</button><button type="button" className="btn btn-light" onClick={switchCamera}>Switch camera</button><button type="button" className="btn btn-light" onClick={closeCamera}>Cancel</button></p>
+    </div> : null}
     <input id="chat-file" type="file" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) void sendMedia(f, "FILE", f.name); e.target.value = ""; }} />
     <form className="composer" onSubmit={send}>
       <label style={{ display: "none" }} htmlFor="chat-photo">Attach photo</label>
