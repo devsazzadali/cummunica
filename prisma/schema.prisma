@@ -59,6 +59,13 @@ model User {
   displayName  String
   communicaId  String   @unique // random 8-digit in-app ID, e.g. 48291357 — NOT a phone number, cannot place/receive phone calls
   passwordHash String
+  // Custom auth decision 2026-11-03 (user): auth is custom JWT+bcrypt,
+  // NOT Neon Auth (Neon is the Postgres DB only). Email verification
+  // is planned later via a Resend API key the user will provide —
+  // no verification mail is sent until then. Email is optional:
+  // registration works with username + password only.
+  email          String?   @unique
+  emailVerifiedAt DateTime?
   avatarUrl    String?
   bio          String?
   lastSeenAt   DateTime @default(now())

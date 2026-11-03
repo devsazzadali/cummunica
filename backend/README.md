@@ -267,8 +267,13 @@ consent rules, socket rooms/events + handshake auth.
 
 - No rate limiting, login lockout, or per-socket caps (auth, socket).
 - No refresh-token rotation (single 7-day JWT).
-- No password-reset flow; no email/phone verification (none is wanted:
-  no real phone numbers by design).
+- No password-reset flow yet. Email verification is PREPARED, not
+  live: custom JWT+bcrypt auth is confirmed (user decision 2026-11-03;
+  Neon Auth is NOT used, Neon is the Postgres DB only), and mail
+  verification will use the Resend API — key to be provided by the
+  user later via the secure vault. Until then `email_verification.ts`
+  fails closed (501) and sends nothing. No real phone numbers by
+  design, so no phone verification.
 - Chat list has no pagination cursor (full filtered list returned).
 - Media duration is validated but not probed here: production MUST
   measure duration server-side (e.g. ffprobe) and must probe audio vs
