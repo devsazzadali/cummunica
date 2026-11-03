@@ -261,7 +261,8 @@ export function RealChat({ chatId, group }: { chatId: string; group: boolean }) 
   };
   const addContact = async () => {
     if (!other) return;
-    try { await apiJson("/api/contacts", { method: "POST", body: { identifier: other.username } }); setContactMsg("Contact request sent — the other user must accept it before calls are allowed."); } catch (err) { setContactMsg(err instanceof Error ? err.message : "could not add contact"); }
+    try { await apiJson("/api/contacts", { method: "POST", body: { identifier: other.username } }); setContactMsg("Contact request sent — the other user must accept it before calls are allowed. Open Contacts from the Chats screen to see Pending / Accepted status."); }
+    catch (err) { const msg = err instanceof Error ? err.message : ""; setContactMsg(/already exists/i.test(msg) ? "Already in contacts — open Contacts from the Chats screen to see Pending / Accepted status." : (msg || "could not add contact")); }
   };
   const favChat = async () => {
     try {

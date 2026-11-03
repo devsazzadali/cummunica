@@ -17,6 +17,7 @@ export default function ChatsPage(){
   <div className="filter-tabs" role="tablist">
    {(["all","unread","favorites","groups"] as F[]).map(f=>(<button key={f} className={filter===f?"on":""} onClick={()=>setFilter(f)}>{f==="all"?"All":f==="unread"?"Unread":f==="favorites"?"Favorites":"Groups"}</button>))}
    <Link href="/archived">Archived</Link>
+   <Link href="/contacts">Contacts</Link>
   </div>
   <RealChatList filter={filter} q={q}/>
   <div className="fab-stack"><Link href="/keypad" className="fab fab-secondary" aria-label="Keypad"><Hash size={24}/></Link><Link href="/new-chat" className="fab" aria-label="New chat"><Plus size={24}/></Link></div></div>;
