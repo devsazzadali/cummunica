@@ -117,6 +117,11 @@ export function verifyToken(token: string): JwtPayload {
     if (isTokenBlocked(decoded.jti)) throw unauthenticated();
     return { userId: decoded.userId, username: decoded.username, jti: decoded.jti, exp: decoded.exp };
   } catch (err) {
+    // A client presenting a token must never learn server config state:
+    // a missing JWT_SECRET on token verification is a generic 401, not
+    // a revealing 500 auth_not_configured. (signToken keeps its 500 —
+    // that path is server-side login/register, never a token probe.)
+    if (err instanceof ApiError && err.code === "auth_not_configured") throw unauthenticated();
     if (err instanceof ApiError) throw err;
     throw unauthenticated();
   }
@@ -146,13 +151,10 @@ export interface AuthDb {
   updateLastSeen(userId: string, at: Date): Promise<void>;
 }
 
-/** ALGORITHMS §1 register. Registration works with username + password
- *  only; email is optional. Returns public user (never passwordHash),
- *  the generated communicaId, and a JWT. */
-export async function registerUser(
-  db: AuthDb,
-  input: { username: string; displayName: string; password: string; email?: string | null },
-): Promise<{ user: PublicUser; communicaId: string; token: string }> {
+/** Pure input validation for registration — no DB access. Routes must
+ *  call this BEFORE getPrisma() so malformed input is a 400 even when
+ *  the database is not configured (otherwise a 503 masks the 400). */
+export function validateRegistrationInput(input: { username: string; displayName: string; password: string; email?: string | null }): void {
   const username = normalizeUsername(input.username);
   validateUsername(username);
   const displayName = input.displayName.trim();
@@ -164,6 +166,19 @@ export async function registerUser(
   if (email !== null && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw badRequest("email address is invalid");
   }
+}
+
+/** ALGORITHMS §1 register. Registration works with username + password
+ *  only; email is optional. Returns public user (never passwordHash),
+ *  the generated communicaId, and a JWT. */
+export async function registerUser(
+  db: AuthDb,
+  input: { username: string; displayName: string; password: string; email?: string | null },
+): Promise<{ user: PublicUser; communicaId: string; token: string }> {
+  validateRegistrationInput(input);
+  const username = normalizeUsername(input.username);
+  const displayName = input.displayName.trim();
+  const email = input.email?.trim() ? input.email.trim() : null;
   const existing = await db.findUserByUsername(username);
   if (existing !== null) throw conflict("username already taken");
 

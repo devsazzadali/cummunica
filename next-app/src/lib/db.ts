@@ -80,7 +80,7 @@ export async function blockedIdsBothDirections(prisma: Db, meId: string): Promis
  *  search — usernames may be digit-leading (^[a-z0-9_]+$), so a
  *  partial ID that is also a username prefix must never match. */
 export async function searchUsers(prisma: Db, meId: string, queryRaw: string): Promise<PublicProfile[]> {
-  const query = queryRaw.trim();
+  const query = queryRaw.trim().replace(/^@/, "");
   if (query === "") return [];
   const excluded = new Set<string>(await blockedIdsBothDirections(prisma, meId));
   excluded.add(meId);

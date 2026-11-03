@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 import { getPrisma } from "@/lib/prisma";
 import { loginUser } from "@/lib/auth";
 import { authDb } from "@/lib/db";
-import { ApiError } from "@/lib/errors";
+import { ApiError, badRequest } from "@/lib/errors";
 import { handleError, json, readJson, asString } from "@/lib/http";
 import { clientIp, isLoginLocked, loginLockError, loginLockKeys, rateLimitOrThrow, recordLoginFailure, resetLoginFailures } from "@/lib/rate-limit";
 
@@ -26,6 +26,9 @@ export async function POST(request: Request) {
   try {
     rateLimitOrThrow(`login-ip:${ip}`, 20, 10 * 60 * 1000, "too many login attempts — try again later");
     if (lockKeys.some((k) => isLoginLocked(k))) throw loginLockError();
+    // Validate BEFORE touching the DB, so empty identifier/password is
+    // a 400 even when DATABASE_URL is not configured (no 503 masking).
+    if (identifier.trim() === "" || asString(body.password) === "") throw badRequest("username and password are required");
     const result = await loginUser(authDb(getPrisma()), identifier, asString(body.password));
     lockKeys.forEach((k) => resetLoginFailures(k));
     return json(result);

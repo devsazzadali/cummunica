@@ -185,6 +185,7 @@ export async function POST(request: Request) {
     if (action === "signal") {
       if (!call) throw forbidden("not a party to this call");
       if (auth.userId !== call.callerId && auth.userId !== call.calleeId) throw forbidden("not a party to this call");
+      if (call.startedAt === null) throw forbidden("call not accepted yet — signals are only relayed after accept");
       let signal;
       try {
         signal = validateSignalMessage({ callId, kind: body.kind, payload: body.payload });

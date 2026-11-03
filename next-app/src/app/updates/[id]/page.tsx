@@ -19,5 +19,5 @@ export default function StatusViewerPage({params}:{params:{id:string}}){
   <p style={{fontSize:20}}>{s.text??""}</p>
   <p style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>{prev?<Link className="btn btn-light" href={`/updates/${prev.id}`}><ChevronLeft size={22}/> Previous</Link>:null}{next?<Link className="btn btn-light" href={`/updates/${next.id}`}>Next <ChevronRight size={22}/></Link>:null}</p>
   <p><button type="button" className="btn btn-light btn-full" onClick={()=>void reply()}><MessageCircle size={22}/> Reply to status</button></p>{msg?<p role="alert">{msg}</p>:null}</div>:
- <div className="wrap">{error?<p role="alert">{error}</p>:<p className="empty">Loading status… (viewing is recorded only for a visible, unexpired status)</p>}</div>}</AppShell>;
+ <div className="wrap">{error?<><p role="alert">{error}</p>{error==="unauthenticated"?<p><Link className="btn btn-green btn-full" href="/login">Login</Link></p>:null}</>:<p className="empty">Loading status… (viewing is recorded only for a visible, unexpired status)</p>}</div>}</AppShell>;
 }

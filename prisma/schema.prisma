@@ -66,6 +66,12 @@ model User {
   // registration works with username + password only.
   email          String?   @unique
   emailVerifiedAt DateTime?
+  // Theme system (Workstream 3, 2026-11-03): the user's saved theme
+  // id ("p" | "v" | "c" | "d"). NULL = no preference: the platform
+  // default theme applies instead. Validated server-side to the
+  // four ids only; the DB value is the source of truth on login and
+  // overwrites any stale localStorage mirror.
+  theme        String?
   avatarUrl    String?
   bio          String?
   lastSeenAt   DateTime @default(now())
@@ -84,6 +90,8 @@ model User {
   memories         UserMemory[]
   reactions        Reaction[]
   messageReads     MessageRead[]
+  supportTickets   SupportTicket[]
+  supportReplies   SupportReply[]  @relation("SupportReplyAuthor")
 
   @@index([username])
   @@index([communicaId])
@@ -241,6 +249,61 @@ model CompanionSetting {
   tone      String        @default("soft")
   language  String        @default("Bengali") // Bengali | Banglish | English
   updatedAt DateTime      @updatedAt
+}
+
+// Customer support (2026-11-03, Workstream 2). Tickets are per-user and
+// owner-only via the API routes: another user's ticket is a 403, never
+// a leak. Admin replies are an INTERIM gate (see src/lib/support.ts):
+// the caller's DB email must equal deploy-time env SUPER_ADMIN_EMAIL,
+// and the gate fails closed when that env var is absent. It migrates
+// to a User.role gate in the admin-dashboard Phase 4/5 — NO role field
+// is invented in this step, and support staff NEVER read private chats.
+enum SupportTicketStatus {
+  Open
+  InProgress
+  Resolved
+}
+
+model SupportTicket {
+  id        String              @id @default(cuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category  String // validated server-side: one of SUPPORT_CATEGORIES in src/lib/support.ts
+  subject   String // 3-150 chars
+  message   String // 10-4000 chars
+  status    SupportTicketStatus @default(Open)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  replies SupportReply[]
+
+  @@index([userId, createdAt])
+}
+
+model SupportReply {
+  id           String   @id @default(cuid())
+  ticketId     String
+  ticket       SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId     String
+  author       User     @relation("SupportReplyAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  body         String // 1-4000 chars
+  isAdminReply Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+// Platform settings (Workstream 3, 2026-11-03): generic key/value
+// store for admin-set platform defaults. The only key written by
+// the theme system is "default_theme" (value = one of p/v/c/d).
+// INTERIM admin gate: see src/lib/support.ts requireInterimAdmin —
+// this migrates to a User.role gate in admin-dashboard Phase 4/5,
+// and the admin-dashboard UI control for this setting comes later
+// in Phase 3. This step is backend setting + API only, no admin UI.
+model PlatformSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 // Generative-AI user data, with consent: only facts/preferences the user gave

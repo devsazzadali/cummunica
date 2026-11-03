@@ -26,5 +26,5 @@ export default function ContactPage({params}:{params:{id:string}}){
   <button type="button" className="btn btn-light btn-full" onClick={()=>void act(async()=>{ await ensureContact(); await apiJson("/api/contacts",{method:"PATCH",body:{identifier:user.username,isBlocked:true}}); },"Contact blocked — their messages and calls are refused by the server")}><Ban size={22}/> Block contact</button>
   <button type="button" className="btn btn-light btn-full" onClick={()=>void act(async()=>{ await ensureContact(); await apiJson("/api/contacts",{method:"PATCH",body:{identifier:user.username,isBlocked:true}}); },"Reported and blocked. There is no moderation review queue yet — that is pending, so blocking is the enforced action today.")}><Flag size={22}/> Report contact</button>
   {info?<p>{info}</p>:null}{error?<p role="alert">{error}</p>:null}
- </div></>:<div className="wrap">{error?<p role="alert">{error}</p>:<p className="empty">Loading contact…</p>}</div>}</AppShell>;
+ </div></>:<div className="wrap">{error?<><p role="alert">{error}</p>{error==="unauthenticated"?<p><Link className="btn btn-green btn-full" href="/login">Login</Link></p>:null}</>:<p className="empty">Loading contact…</p>}</div>}</AppShell>;
 }
