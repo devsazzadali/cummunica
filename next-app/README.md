@@ -275,3 +275,6 @@ Honest limitations (NOT claimed):
 ## Deploy trigger
 Vercel auto-deploy check — 2026-11-03: this commit exists only to
 trigger a fresh Vercel deployment from main after the system-font fix.
+Second trigger — 2026-11-03 21:32: manual Redeploy keeps rebuilding
+old commit 7cf6838, so this commit tests whether a fresh push creates
+a new Vercel deployment automatically. Do NOT redeploy old deployments.
