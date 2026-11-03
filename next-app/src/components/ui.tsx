@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MessageCircle, CircleDot, Users, Phone, Settings, Check, CheckCheck, Star, Search, ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { initials } from "@/lib/demo-data"; // initials() only — no demo users/chats are rendered anywhere now.
+import { CallBanner } from "@/components/call-banner";
 const AVATAR_VARIANTS=["avatar-c-green","avatar-c-purple","avatar-c-amber","avatar-c-pink","avatar-c-teal"];
 function avatarVariant(name:string){let h=0;for(const c of name)h=(h*31+c.charCodeAt(0))>>>0;return AVATAR_VARIANTS[h%AVATAR_VARIANTS.length];}
 export function Avatar({name,ai=false,group=false,size=50}:{name:string;ai?:boolean;group?:boolean;size?:number}){
@@ -19,8 +20,8 @@ export function TopBar({title,back,actions}:{title:string;back?:string;actions?:
   return <header className="topbar">{back?<Link className="icon-btn" href={back} aria-label="Back"><ArrowLeft size={22}/></Link>:null}<h1>{title}</h1><div className="topbar-actions">{actions}</div></header>;
 }
 export const NAV=[{href:"/chats",label:"Chats",Icon:MessageCircle},{href:"/updates",label:"Updates",Icon:CircleDot},{href:"/communities",label:"Communities",Icon:Users},{href:"/calls",label:"Calls",Icon:Phone},{href:"/settings",label:"Settings",Icon:Settings}];
-export function BottomNav({active}:{active:string}){
-  return <nav className="bottom-nav" aria-label="Main tabs">{NAV.map(({href,label,Icon})=>(
+export function BottomNav({active,hide}:{active:string;hide?:boolean}){
+  return <nav className={hide?"bottom-nav bottom-nav-hide-mobile":"bottom-nav"} aria-label="Main tabs">{NAV.map(({href,label,Icon})=>(
     <Link key={href} href={href} className={active===label?"nav-item nav-active":"nav-item"} aria-current={active===label?"page":undefined}><Icon size={22} strokeWidth={2}/><span>{label}</span></Link>))}</nav>;
 }
 export function DesktopTabs({active}:{active:string}){
@@ -33,11 +34,11 @@ export function SearchBar({placeholder,href}:{placeholder:string;href?:string}){
 export function TwoPane({list,detail,listHideMobile}:{list:ReactNode;detail:ReactNode;listHideMobile?:boolean}){
   return <div className="two-pane"><aside className={listHideMobile?"pane-list pane-list-hide-mobile":"pane-list"}>{list}</aside><section className="pane-detail">{detail}</section></div>;
 }
-export function AppShell({active,title,children,back,hideHeader}:{active:string;title?:string;children:ReactNode;back?:string;hideHeader?:boolean}){
-  return <div className="app-shell">
+export function AppShell({active,title,children,back,hideHeader,hideBottomNav}:{active:string;title?:string;children:ReactNode;back?:string;hideHeader?:boolean;hideBottomNav?:boolean}){
+  return <div className="app-shell"><CallBanner />
     <header className={hideHeader?"app-header app-header-hide-mobile":"app-header"}><Link className="brand" href="/chats">Communica</Link><DesktopTabs active={active}/>{title?<span className="app-title">{title}</span>:null}</header>
     <main className="app-main">{children}</main>
-    <BottomNav active={active}/>
+    <BottomNav active={active} hide={hideBottomNav}/>
   </div>;
 }
 export function SimpleShell({active,children}:{active:string;children:ReactNode}){

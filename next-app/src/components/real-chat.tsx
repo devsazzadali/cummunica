@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Phone, Video, Info, Send, Paperclip, Mic, Star, Archive, Ban, Heart } from "lucide-react";
+import { ArrowLeft, Phone, Video, Send, Paperclip, Mic, Star, Heart, MoreVertical, Smile, Camera } from "lucide-react";
 import { Avatar, Ticks } from "@/components/ui";
 import { apiJson, chatTitle, getToken, uploadFile, type ChatItem, type Msg } from "@/lib/api-client";
 
@@ -60,6 +60,13 @@ export function RealChat({ chatId, group }: { chatId: string; group: boolean }) 
   const [editText, setEditText] = useState("");
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [chatSearch, setChatSearch] = useState("");
+  const [showMedia, setShowMedia] = useState(false);
+  const [contactMsg, setContactMsg] = useState("");
   const [myId, setMyId] = useState("");
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -150,6 +157,10 @@ export function RealChat({ chatId, group }: { chatId: string; group: boolean }) 
   const archiveChat = async (archived: boolean) => {
     try { await apiJson("/api/chats", { method: "PATCH", body: { chatId, archived } }); } catch (err) { setError(err instanceof Error ? err.message : "archive failed"); }
   };
+  const addContact = async () => {
+    if (!other) return;
+    try { await apiJson("/api/contacts", { method: "POST", body: { identifier: other.username } }); setContactMsg("Contact request sent — the other user must accept it before calls are allowed."); } catch (err) { setContactMsg(err instanceof Error ? err.message : "could not add contact"); }
+  };
   const favChat = async () => {
     try {
       const other = chat?.members.find((m) => m.userId !== myId);
@@ -172,21 +183,23 @@ export function RealChat({ chatId, group }: { chatId: string; group: boolean }) 
   const me = meUsername();
   const name = chat ? chatTitle(chat, me) : "Chat";
   const other = chat?.members.find((m) => m.userId !== myId);
+  const displayMsgs = chatSearch.trim() === "" ? msgs : msgs.filter((m) => (m.text ?? "").toLowerCase().includes(chatSearch.trim().toLowerCase()));
+  const msgsWithDate = displayMsgs.map((m, i) => ({ m, showDate: i === 0 || new Date(displayMsgs[i - 1].createdAt).toDateString() !== new Date(m.createdAt).toDateString() }));
   return <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
     <header className="topbar">
       <Link className="icon-btn" href="/chats" aria-label="Back"><ArrowLeft size={22} /></Link>
       <Avatar name={name} group={group} />
       <h1>{name}{chat?.members.length ? ` · ${chat.members.length} member${chat.members.length > 1 ? "s" : ""}` : ""}</h1>
       <div className="topbar-actions">
-        {other ? <><Link className="icon-btn" href={`/call?to=${encodeURIComponent(other.displayName)}&callee=${other.username}&kind=audio&variant=outgoing`} aria-label="Audio call"><Phone size={22} /></Link><Link className="icon-btn" href={`/call?to=${encodeURIComponent(other.displayName)}&callee=${other.username}&kind=video&variant=outgoing`} aria-label="Video call"><Video size={22} /></Link><Link className="icon-btn" href={`/contacts/${other.username}`} aria-label="Profile"><Info size={22} /></Link></> : null}
-        {group ? <Link className="icon-btn" href={`/groups/${chatId}/info`} aria-label="Group info"><Info size={22} /></Link> : null}
+        {other ? <><Link className="icon-btn" href={`/call?to=${encodeURIComponent(other.displayName)}&callee=${other.username}&kind=audio&variant=outgoing`} aria-label="Audio call"><Phone size={22} /></Link><Link className="icon-btn" href={`/call?to=${encodeURIComponent(other.displayName)}&callee=${other.username}&kind=video&variant=outgoing`} aria-label="Video call"><Video size={22} /></Link></> : null}
+        <div className="chat-menu-wrap"><button type="button" className="icon-btn" aria-label="More options" onClick={() => setMenuOpen(!menuOpen)}><MoreVertical size={22} /></button>{menuOpen ? <div className="chat-menu"><Link href="/new-group" onClick={() => setMenuOpen(false)}>New group</Link>{other ? <button type="button" onClick={() => { setMenuOpen(false); void addContact(); }}>Add to contacts</button> : null}<button type="button" onClick={() => { setMenuOpen(false); setShowMedia(false); setShowSearch(!showSearch); }}>Search in chat</button><button type="button" onClick={() => { setMenuOpen(false); setShowSearch(false); setShowMedia(!showMedia); }}>Media, links, and docs</button><Link href="/settings" onClick={() => setMenuOpen(false)}>Chat theme</Link>{other ? <Link href={`/contacts/${other.username}`} onClick={() => setMenuOpen(false)}>View contact</Link> : null}{group ? <Link href={`/groups/${chatId}/info`} onClick={() => setMenuOpen(false)}>Group info</Link> : null}<button type="button" onClick={() => { setMenuOpen(false); void favChat(); }}>Favourite</button><button type="button" onClick={() => { setMenuOpen(false); void archiveChat(true); }}>Archive</button>{other ? <button type="button" onClick={() => { setMenuOpen(false); void blockChat(); }}>Block</button> : null}</div> : null}</div>
       </div>
     </header>
-    <div className="chat-view"><div className="chat-bg">
-      {msgs.map((m) => {
+    <div className="chat-view">{contactMsg ? <p className="chat-panel" role="status">{contactMsg}</p> : null}{showSearch ? <div className="chat-panel"><input value={chatSearch} onChange={(e) => setChatSearch(e.target.value)} placeholder="Search in this chat…" aria-label="Search in this chat" /><button type="button" className="btn btn-light" onClick={() => { setChatSearch(""); setShowSearch(false); }}>Close</button>{chatSearch.trim() !== "" ? <span>{displayMsgs.length} match{displayMsgs.length === 1 ? "" : "es"} in loaded messages</span> : null}</div> : null}{showMedia ? <div className="chat-panel"><h3>Media</h3>{msgs.filter((m) => m.mediaUrl).length ? <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{msgs.filter((m) => m.mediaUrl).map((m) => (<span key={m.id}>{m.type === "PHOTO" && m.mediaUrl ? <img src={m.mediaUrl} alt="Shared photo" style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 8 }} /> : m.type === "VIDEO" && m.mediaUrl ? <video src={m.mediaUrl} style={{ width: 120, borderRadius: 8 }} controls /> : m.type === "VOICE" && m.mediaUrl ? <audio src={m.mediaUrl} controls style={{ maxWidth: 200 }} /> : null}</span>))}</div> : <p>No media shared yet.</p>}<h3>Links</h3>{(() => { const links: string[] = []; msgs.forEach((m) => { const found = (m.text ?? "").match(/https?:\/\/[^\s]+/g); if (found) links.push(...found); }); return links.length ? <ul>{links.map((u, i) => (<li key={i}><a href={u} target="_blank" rel="noreferrer">{u}</a></li>))}</ul> : <p>No links shared yet.</p>; })()}<h3>Docs</h3><p>No documents shared yet — Communica messages support photos, voice and video only.</p><button type="button" className="btn btn-light" onClick={() => setShowMedia(false)}>Close</button></div> : null}<div className="chat-bg">
+      {msgsWithDate.map(({ m, showDate }) => {
         const mine = m.senderId === myId;
         const senderName = m.sender?.displayName ?? (mine ? "You" : "");
-        return <div key={m.id} className={mine ? "bubble bubble-me" : "bubble bubble-other"}>
+        return <div key={m.id} style={{ display: "contents" }}>{showDate ? <div className="date-pill"><span>{new Date(m.createdAt).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric" })}</span></div> : null}<div className={mine ? "bubble bubble-me" : "bubble bubble-other"} onClick={() => setSelectedId(selectedId === m.id ? null : m.id)}>
           {group && !mine ? <span className="bubble-sender">{senderName}</span> : null}
           {m.deletedForAll ? <span><em>This message was deleted</em></span> : <>
             {m.replyToId ? <span style={{ fontSize: 13, opacity: 0.8 }}>Replying to a message</span> : null}
@@ -197,31 +210,29 @@ export function RealChat({ chatId, group }: { chatId: string; group: boolean }) 
           </>}
           <span className="bubble-meta">{fmt(m.createdAt)}{m.editedAt ? " · edited" : ""} {mine ? <Ticks status={(m.reads?.length ?? 0) > 0 ? "read" : "delivered"} /> : null}</span>
           {(m.reactions?.length ?? 0) > 0 ? <span style={{ fontSize: 13 }}>{m.reactions!.map((r) => r.emoji).join(" ")}</span> : null}
-          {!m.deletedForAll ? <span style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+          {!m.deletedForAll && selectedId === m.id ? <span className="msg-actions">
             <button type="button" className="btn btn-light" style={{ minHeight: 44, padding: "10px 14px" }} onClick={() => setReplyTo(m)}>Reply</button>
             <button type="button" className="btn btn-light" style={{ minHeight: 44, padding: "10px 14px" }} onClick={() => void react(m, "❤️")} aria-label="React with heart"><Heart size={16} /></button>
             {mine && m.type === "TEXT" ? <button type="button" className="btn btn-light" style={{ minHeight: 44, padding: "10px 14px" }} onClick={() => { setEditing(m); setEditText(m.text ?? ""); }}>Edit</button> : null}
             {mine ? <button type="button" className="btn btn-light" style={{ minHeight: 44, padding: "10px 14px" }} onClick={() => void deleteForAll(m)}>Delete for all</button> : null}
           </span> : null}
-        </div>;
+        </div></div>;
       })}
       {error !== "" ? <p role="alert">{error}</p> : null}
       {replyTo ? <p>Replying to: {replyTo.text ?? replyTo.type} <button type="button" className="btn btn-light" onClick={() => setReplyTo(null)}>Cancel</button></p> : null}
       {editing ? <p><input value={editText} onChange={(e) => setEditText(e.target.value)} aria-label="Edited message" /><button type="button" className="btn btn-green" onClick={() => void saveEdit()}>Save edit</button> <button type="button" className="btn btn-light" onClick={() => setEditing(null)}>Cancel</button></p> : null}
-      <p style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button type="button" className="btn btn-light" onClick={() => void favChat()}><Star size={22} /> Favourite</button>
-        <button type="button" className="btn btn-light" onClick={() => void archiveChat(true)}><Archive size={22} /> Archive</button>
-        {other ? <button type="button" className="btn btn-light" onClick={() => void blockChat()}><Ban size={22} /> Block</button> : null}
-      </p>
       <p className="ai-label">Messages refresh every 3 seconds (polling). Live Socket.io chat relay is not built — calls use Socket.io signalling; chat delivery is API + polling, honestly labelled.</p>
     </div>
+    {emojiOpen ? <div className="emoji-picker">{["😊", "❤️", "👍", "😂", "🙏", "🎉", "😢", "🔥", "👋", "✅", "🌸", "🙌"].map((e) => (<button key={e} type="button" aria-label="Insert emoji" onClick={() => { setText(text + e); setEmojiOpen(false); }}>{e}</button>))}</div> : null}
     <form className="composer" onSubmit={send}>
       <label style={{ display: "none" }} htmlFor="chat-photo">Attach photo</label>
       <input id="chat-photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) void sendMedia(f); e.target.value = ""; }} />
-      <button type="button" className="icon-btn" aria-label="Attach photo" onClick={() => document.getElementById("chat-photo")?.click()}><Paperclip size={22} /></button>
+      <input id="chat-camera" type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) void sendMedia(f); e.target.value = ""; }} />
+      <button type="button" className="icon-btn" aria-label="Emoji" onClick={() => setEmojiOpen(!emojiOpen)}><Smile size={22} /></button>
       <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Message…" aria-label="Message" />
-      <button type="button" className="icon-btn" aria-label={recording ? "Stop voice recording" : "Record voice message"} onClick={() => void toggleRecord()}><Mic size={22} />{recording ? "Stop" : ""}</button>
-      <button type="submit" className="icon-btn icon-btn-send" aria-label="Send" disabled={busy}><Send size={22} /></button>
+      <button type="button" className="icon-btn" aria-label="Attach photo" onClick={() => document.getElementById("chat-photo")?.click()}><Paperclip size={22} /></button>
+      <button type="button" className="icon-btn" aria-label="Camera" onClick={() => document.getElementById("chat-camera")?.click()}><Camera size={22} /></button>
+      {text.trim() === "" ? <button type="button" className="icon-btn" aria-label={recording ? "Stop voice recording" : "Record voice message"} onClick={() => void toggleRecord()}><Mic size={22} />{recording ? "Stop" : ""}</button> : <button type="submit" className="icon-btn icon-btn-send" aria-label="Send" disabled={busy}><Send size={22} /></button>}
     </form></div>
   </div>;
 }

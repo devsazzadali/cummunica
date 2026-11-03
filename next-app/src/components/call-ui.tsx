@@ -516,7 +516,7 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
   if (phase === "error") {
     return (
       <div className="call-shell">
-        <Avatar name={name} size={96} />
+        <Avatar name={name} size={160} />
         <h2>{name}</h2>
         <p role="alert">{error}</p>
         <p className="call-timer">No call was placed. No microphone or camera was used for a fake call.</p>
@@ -528,7 +528,7 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
   if (phase === "ended") {
     return (
       <div className="call-shell">
-        <Avatar name={name} size={96} />
+        <Avatar name={name} size={160} />
         <h2>{name}</h2>
         <p className="empty">{endedReason || "Call ended."}</p>
         <Link className="btn btn-green" href="/calls">Back to Calls</Link>
@@ -556,7 +556,7 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
 
   return (
     <div className="call-shell">
-      <Avatar name={name} size={96} />
+      <Avatar name={name} size={160} />
       <h2>{name}</h2>
       <p>{statusText}</p>
       {phase === "connected" ? <p className="call-timer">{fmtElapsed(elapsed)}</p> : <p className="call-timer">Timer starts only when the call actually connects.</p>}
