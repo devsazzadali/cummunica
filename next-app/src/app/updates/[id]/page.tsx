@@ -13,7 +13,7 @@ export default function StatusViewerPage({params}:{params:{id:string}}){
  }catch(err){ setError(err instanceof Error?err.message:"failed to load status"); } })(); },[params.id]);
  const idx=Math.max(0,list.findIndex(s=>s.id===params.id)); const s=list[idx]; const prev=list[(idx-1+list.length)%list.length]; const next=list[(idx+1)%list.length];
  const reply=async()=>{ if(!s?.user) return; try{ const d=await apiJson("/api/chats",{method:"POST",body:{type:"DIRECT",otherIdentifier:s.user.username}}) as {chat:{id:string}}; router.push(`/chats/${d.chat.id}`); }catch(err){ setMsg(err instanceof Error?err.message:"could not open chat"); } };
- return <AppShell active="Updates"><header className="topbar"><Link className="icon-btn" href="/updates" aria-label="Back"><ArrowLeft size={22}/></Link><h1>Status viewer</h1></header>
+ return <AppShell requireLogin active="Updates"><header className="topbar"><Link className="icon-btn" href="/updates" aria-label="Back"><ArrowLeft size={22}/></Link><h1>Status viewer</h1></header>
  {s?<div className="wrap" style={{textAlign:"center"}}><Avatar name={s.user?.displayName??"Status"} size={80}/><h2>{s.user?.displayName??""}</h2><p>{new Date(s.createdAt).toLocaleString()} • expires {new Date(s.expiresAt).toLocaleString()}</p>
   {s.mediaUrl?<img src={s.mediaUrl} alt="Status photo" style={{maxWidth:"100%",borderRadius:12}}/>:null}
   <p style={{fontSize:20}}>{s.text??""}</p>

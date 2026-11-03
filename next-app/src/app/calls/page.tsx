@@ -8,7 +8,7 @@ type CallRow={id:string;type:string;status:string;startedAt:string;durationSec:n
 export default function CallsPage(){
  const [calls,setCalls]=useState<CallRow[]|null>(null); const [error,setError]=useState(""); const [me,setMe]=useState("");
  useEffect(()=>{ try{ setMe(JSON.parse(localStorage.getItem("communica_user")??"{}").username??""); }catch{} (async()=>{ try{ const d=await apiJson("/api/calls") as {calls:CallRow[]}; setCalls(d.calls); }catch(err){ setError(err instanceof Error?err.message:"failed to load calls"); } })(); },[]);
- return <AppShell active="Calls"><header className="topbar"><h1>Calls</h1><div className="topbar-actions"><Link className="icon-btn" href="/keypad" aria-label="Keypad"><Hash size={22}/></Link></div></header>
+ return <AppShell requireLogin active="Calls"><header className="topbar"><h1>Calls</h1><div className="topbar-actions"><Link className="icon-btn" href="/keypad" aria-label="Keypad"><Hash size={22}/></Link></div></header>
  <div className="wrap"><p><Link className="btn btn-light" href="/call?kind=audio&variant=incoming">Listen for a real incoming audio call</Link> <Link className="btn btn-light" href="/call?kind=video&variant=incoming">Listen for a real incoming video call</Link></p>
   <p>Only real CallLog rows are listed below. A call only connects to a real user who has accepted you as a contact; otherwise the call screen says so plainly instead of simulating a call.</p></div>
  <h2 style={{padding:"0 16px"}}>Recent Calls</h2>

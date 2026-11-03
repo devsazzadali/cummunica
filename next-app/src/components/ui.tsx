@@ -3,6 +3,7 @@ import { MessageCircle, CircleDot, Users, Phone, Settings, Check, CheckCheck, St
 import type { ReactNode } from "react";
 import { initials } from "@/lib/demo-data"; // initials() only — no demo users/chats are rendered anywhere now.
 import { CallBanner } from "@/components/call-banner";
+import { RequireLogin } from "@/components/require-login";
 const AVATAR_VARIANTS=["avatar-c-green","avatar-c-purple","avatar-c-amber","avatar-c-pink","avatar-c-teal"];
 function avatarVariant(name:string){let h=0;for(const c of name)h=(h*31+c.charCodeAt(0))>>>0;return AVATAR_VARIANTS[h%AVATAR_VARIANTS.length];}
 export function Avatar({name,ai=false,group=false,size=50}:{name:string;ai?:boolean;group?:boolean;size?:number}){
@@ -34,12 +35,13 @@ export function SearchBar({placeholder,href}:{placeholder:string;href?:string}){
 export function TwoPane({list,detail,listHideMobile}:{list:ReactNode;detail:ReactNode;listHideMobile?:boolean}){
   return <div className="two-pane"><aside className={listHideMobile?"pane-list pane-list-hide-mobile":"pane-list"}>{list}</aside><section className="pane-detail">{detail}</section></div>;
 }
-export function AppShell({active,title,children,back,hideHeader,hideBottomNav}:{active:string;title?:string;children:ReactNode;back?:string;hideHeader?:boolean;hideBottomNav?:boolean}){
-  return <div className="app-shell"><CallBanner />
-    <header className={hideHeader?"app-header app-header-hide-mobile":"app-header"}><Link className="brand" href="/chats">Communica</Link><DesktopTabs active={active}/>{title?<span className="app-title">{title}</span>:null}</header>
+export function AppShell({active,title,children,back,hideHeader,hideBottomNav,requireLogin}:{active:string;title?:string;children:ReactNode;back?:string;hideHeader?:boolean;hideBottomNav?:boolean;requireLogin?:boolean}){
+  const shell = <div className="app-shell"><CallBanner />
+    <header className={hideHeader?"app-header app-header-hide-mobile":"app-header"}><Link className="brand" href="/chats">Communica</Link><Link className="brand-icon" href="/chats" aria-label="Communica home">C</Link><DesktopTabs active={active}/>{title?<span className="app-title">{title}</span>:null}</header>
     <main className="app-main">{children}</main>
     <BottomNav active={active} hide={hideBottomNav}/>
   </div>;
+  return requireLogin ? <RequireLogin>{shell}</RequireLogin> : shell;
 }
 export function SimpleShell({active,children}:{active:string;children:ReactNode}){
   return <div className="app-shell"><header className="app-header"><Link className="brand" href="/chats">Communica</Link><DesktopTabs active={active}/></header><main className="app-main">{children}</main><BottomNav active={active}/></div>;

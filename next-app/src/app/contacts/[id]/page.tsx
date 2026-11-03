@@ -5,18 +5,19 @@ import { useRouter } from "next/navigation";
 import { MessageCircle, Phone, Video, Star, Archive, Ban, Flag, ArrowLeft } from "lucide-react";
 import { AppShell, Avatar } from "@/components/ui";
 import { apiJson } from "@/lib/api-client";
-type U={username:string;displayName:string;communicaId:string;bio:string|null};
+type U={username:string;displayName:string;communicaId:string;bio:string|null;avatarUrl:string|null};
 export default function ContactPage({params}:{params:{id:string}}){
  const router=useRouter();
- const [user,setUser]=useState<U|null>(null); const [error,setError]=useState(""); const [info,setInfo]=useState("");
+ const [user,setUser]=useState<U|null>(null); const [error,setError]=useState(""); const [info,setInfo]=useState(""); const [copied,setCopied]=useState(false);
+ const copyId=async()=>{ if(!user) return; try{ await navigator.clipboard.writeText(user.communicaId); setCopied(true); setTimeout(()=>setCopied(false),2000); }catch{ setError("Could not copy — long-press the ID to copy it manually."); } };
  useEffect(()=>{ (async()=>{ try{ const d=await apiJson(`/api/users/search?q=${encodeURIComponent(params.id)}`) as {results:U[]}; const f=d.results.find(r=>r.username===params.id||r.communicaId===params.id)??d.results[0]; if(!f) throw new Error("contact not found — search by exact @username or 8-digit ID"); setUser(f); }catch(err){ setError(err instanceof Error?err.message:"failed to load contact"); } })(); },[params.id]);
  const act=async(fn:()=>Promise<unknown>,msg:string)=>{ setError(""); setInfo(""); try{ await fn(); setInfo(msg); }catch(err){ setError(err instanceof Error?err.message:"action failed"); } };
  const message=async()=>{ if(!user) return; try{ const d=await apiJson("/api/chats",{method:"POST",body:{type:"DIRECT",otherIdentifier:user.username}}) as {chat:{id:string}}; router.push(`/chats/${d.chat.id}`); }catch(err){ setError(err instanceof Error?err.message:"could not open chat"); } };
  const ensureContact=async()=>{ if(!user) return; await apiJson("/api/contacts",{method:"POST",body:{identifier:user.username}}).catch(()=>{}); };
  const archive=async()=>{ if(!user) return; const d=await apiJson("/api/chats",{method:"POST",body:{type:"DIRECT",otherIdentifier:user.username}}) as {chat:{id:string}}; await apiJson("/api/chats",{method:"PATCH",body:{chatId:d.chat.id,archived:true}}); };
  const name=user?.displayName??"Contact";
- return <AppShell active="Chats"><header className="topbar"><Link className="icon-btn" href="/chats" aria-label="Back"><ArrowLeft size={22}/></Link><h1>Contact Profile</h1></header>
- {user?<><div className="wrap" style={{textAlign:"center"}}><Avatar name={name} size={80}/><h2>{name}</h2><p>@{user.username} • Communica ID {user.communicaId}</p><p>In-app ID only — not a phone number{user.bio?` · ${user.bio}`:""}</p></div>
+ return <AppShell requireLogin active="Chats"><header className="topbar"><Link className="icon-btn" href="/chats" aria-label="Back"><ArrowLeft size={22}/></Link><h1>Contact Profile</h1></header>
+ {user?<><div className="wrap" style={{textAlign:"center"}}>{user.avatarUrl?<img src={user.avatarUrl} alt={`${name} photo`} style={{width:80,height:80,borderRadius:"50%",objectFit:"cover"}}/>:<Avatar name={name} size={80}/>}<h2>{name}</h2><p>@{user.username}</p><p>Communica ID {user.communicaId} <button type="button" className="btn btn-light" style={{minHeight:44,padding:"10px 14px"}} onClick={()=>void copyId()}>{copied?"Copied":"Copy ID"}</button></p><p>In-app ID only — not a phone number</p>{user.bio?<><h3>About</h3><p>{user.bio}</p></>:<p>About: not set yet.</p>}</div>
  <div className="wrap" style={{display:"flex",flexDirection:"column",gap:10}}>
   <button type="button" className="btn btn-light btn-full" onClick={()=>void message()}><MessageCircle size={22}/> Message</button>
   <Link className="btn btn-light btn-full" href={`/call?to=${encodeURIComponent(name)}&callee=${user.username}&kind=audio&variant=outgoing`}><Phone size={22}/> Audio call (in-app only)</Link>

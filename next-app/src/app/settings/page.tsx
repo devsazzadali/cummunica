@@ -5,11 +5,15 @@ import Link from "next/link";
 import { Bot, Archive, Star, LogOut, LifeBuoy } from "lucide-react";
 import { AppShell, Avatar } from "@/components/ui";
 import { apiJson, uploadFile } from "@/lib/api-client";
+import { soundOn, setSoundOn, playReceiveSound } from "@/lib/sound";
 import { THEMES, applyTheme, isThemeId, type ThemeId } from "@/lib/theme";
 type Profile={username:string;displayName:string;communicaId:string;bio:string|null;avatarUrl:string|null;theme:string|null};
 export default function SettingsPage(){
  const [profile,setProfile]=useState<Profile|null>(null); const [name,setName]=useState(""); const [bio,setBio]=useState(""); const [error,setError]=useState(""); const [saved,setSaved]=useState(false); const [avatarBusy,setAvatarBusy]=useState(false);
- const [themeChoice,setThemeChoice]=useState<ThemeId|null>(null); const [themeSaved,setThemeSaved]=useState(false); const [themeBusy,setThemeBusy]=useState(false);
+ const [themeChoice,setThemeChoice]=useState<ThemeId|null>(null);
+ const [sound,setSound]=useState(true); const [notif,setNotif]=useState("");
+ useEffect(()=>{ setSound(soundOn()); setNotif(typeof Notification !== "undefined" ? Notification.permission : "unsupported"); },[]);
+ const enableNotif=async()=>{ try{ if(!("Notification" in window)){ setNotif("unsupported"); return; } const r=await Notification.requestPermission(); setNotif(r); }catch{ setNotif("denied"); } }; const [themeSaved,setThemeSaved]=useState(false); const [themeBusy,setThemeBusy]=useState(false);
  const saveTheme=async(choice:ThemeId|null)=>{ setError(""); setThemeSaved(false); setThemeBusy(true); try{ const d=await apiJson("/api/profile",{method:"PATCH",body:{theme:choice}}) as {profile:Profile}; setProfile(d.profile); setThemeChoice(d.profile.theme && isThemeId(d.profile.theme)?d.profile.theme:null); if(choice) applyTheme(choice); else { try{ const def=await apiJson("/api/theme/default") as {theme?:string}; if(isThemeId(def.theme)) document.documentElement.setAttribute("data-theme",def.theme); }catch{} } setThemeSaved(true); }catch(err){ setError(err instanceof Error?err.message:"theme was not saved"); } setThemeBusy(false); };
  const router=useRouter();
  const changeAvatar=async(file:File)=>{ setError(""); setSaved(false); setAvatarBusy(true); try{ const up=await uploadFile(file); const d=await apiJson("/api/profile",{method:"PATCH",body:{avatarUrl:up.url}}) as {profile:Profile}; setProfile(d.profile); setSaved(true); }catch(err){ setError(err instanceof Error?err.message:"avatar was not changed"); } setAvatarBusy(false); };
@@ -17,7 +21,7 @@ export default function SettingsPage(){
  useEffect(()=>{ (async()=>{ try{ const d=await apiJson("/api/profile") as {profile:Profile}; setProfile(d.profile); setName(d.profile.displayName); setBio(d.profile.bio??""); setThemeChoice(d.profile.theme && isThemeId(d.profile.theme)?d.profile.theme:null); if(d.profile.theme && isThemeId(d.profile.theme)) applyTheme(d.profile.theme); }catch(err){ setError(err instanceof Error?err.message:"failed to load profile — login first"); } })(); },[]);
  const save=async(e:React.FormEvent)=>{ e.preventDefault(); setError(""); setSaved(false); try{ await apiJson("/api/profile",{method:"PATCH",body:{displayName:name,bio}}); setSaved(true); }catch(err){ setError(err instanceof Error?err.message:"profile was not saved"); } };
  const logout=async()=>{ try{ await apiJson("/api/auth/logout",{method:"POST"}); }catch{} try{ localStorage.removeItem("communica_token"); localStorage.removeItem("communica_user"); localStorage.removeItem("communica_theme"); }catch{} try{ const def=await apiJson("/api/theme/default") as {theme?:string}; document.documentElement.setAttribute("data-theme",isThemeId(def.theme)?def.theme:"p"); }catch{ document.documentElement.setAttribute("data-theme","p"); } router.push("/"); };
- return <AppShell active="Settings"><header className="topbar"><h1>Settings</h1></header>
+ return <AppShell requireLogin active="Settings"><header className="topbar"><h1>Settings</h1></header>
  <div className="wrap">
   {/* F21 — avatar upload/change UI (was API-only). Uses the real
       /api/media upload path, then PATCH /api/profile avatarUrl,
@@ -42,6 +46,10 @@ export default function SettingsPage(){
       for real via PATCH /api/profile; the new theme applies
       instantly (same render) and survives logout/login because the
       DB value is re-applied after login. */}
+  <h2>Notifications &amp; sound</h2>
+  <p>Message send/receive sound: {sound ? "on" : "off"} — <button type="button" className="btn btn-light" style={{minHeight:44,padding:"10px 14px"}} onClick={()=>{ const v=!sound; setSoundOn(v); setSound(v); if(v) playReceiveSound(); }}>{sound ? "Turn sound off" : "Turn sound on"}</button> <button type="button" className="btn btn-light" style={{minHeight:44,padding:"10px 14px"}} onClick={()=>playReceiveSound()}>Test sound</button></p>
+  <p>Browser notification permission: {notif} — <button type="button" className="btn btn-light" style={{minHeight:44,padding:"10px 14px"}} onClick={()=>void enableNotif()}>Enable notifications</button></p>
+  <p className="ai-label" style={{textAlign:"left"}}>Sound + in-app notification work when the app/tab is open. Notification when Chrome is completely closed needs browser push (our own VAPID keys, not a third-party app) — that server push is NOT active yet, so it is not claimed here. When Chrome is open in the background, the browser notification above will appear.</p>
   <h2>Theme</h2>
   <p className="ai-label" style={{textAlign:"left"}}>Choose how Communica looks. Colours, bubble shapes, buttons and headers all change together.</p>
   <div className="theme-picker" role="radiogroup" aria-label="Theme">

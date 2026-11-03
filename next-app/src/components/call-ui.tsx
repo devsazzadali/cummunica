@@ -85,7 +85,8 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const go = (p: Phase) => { phaseRef.current = p; setPhase(p); };
-  const fail = (msg: string) => { setError(msg); go("error"); };
+  const [authError, setAuthError] = useState(false);
+  const fail = (msg: string, isAuth = false) => { setAuthError(isAuth); setError(msg); go("error"); };
   const finish = (reason: string) => {
     if (endedRef.current) return;
     endedRef.current = true;
@@ -335,11 +336,12 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
     const token = readToken();
     tokenRef.current = token;
     if (!token) {
-      setError("Sign in to place or receive a real call. Calls only go to contacts who have accepted you.");
+      setAuthError(true); setError("Sign in to place or receive a real call. Calls only go to contacts who have accepted you.");
       go("error");
       return;
     }
-    connectSocket(token);
+    // Own-system signalling only: REST polling (/api/calls) + WebRTC browser-to-browser.
+    // No Socket.io, no external calling app, no third-party API is used in the call flow.
     let cancelled = false;
     (async () => {
       if (variant === "incoming" && initialCallId) {
@@ -356,10 +358,16 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
       if (variant === "incoming") { go("listening"); return; }
       // Outgoing: resolve the dialled name/ID to a real user, then invite.
       const query = callee ?? name;
+      let meUser = ""; let meId = "";
+      try { const u = JSON.parse(localStorage.getItem("communica_user") ?? "{}"); meUser = (u.username ?? "").toLowerCase(); meId = u.communicaId ?? ""; } catch {}
+      if (query.trim().toLowerCase().replace(/^@/, "") === meUser || (meId && query.trim() === meId)) {
+        fail("This is your own account — you cannot call yourself. Call another registered user who has accepted you as a contact.");
+        return;
+      }
       const identifier = await resolveCalleeIdentifier(token, query);
       if (cancelled) return;
       if (!identifier) {
-        fail(`Could not find "${query}" as a real Communica user. Calls only go to contacts who have accepted you — check the name or 8-digit Communica ID and try again.`);
+        fail(`Could not find "${query}" as a registered Communica user. That account has not registered on this app yet, or the name/ID is wrong — ask them to register first, then send a contact request and wait for acceptance before calling.`);
         return;
       }
       try {
@@ -379,7 +387,7 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
         if (status === 403) {
           fail("This contact has not accepted you yet, or has blocked calls. Calls are only allowed to accepted contacts.");
         } else if (status === 401) {
-          fail("Your sign-in expired. Sign in again and retry the call.");
+          fail("Your sign-in expired. Sign in again and retry the call.", true);
         } else {
           fail(err instanceof Error ? err.message : "The call could not be started.");
         }
@@ -521,7 +529,8 @@ export function CallScreen({ name, kind, variant, callee, callId: initialCallId 
         <p role="alert">{error}</p>
         <p className="call-timer">No call was placed. No microphone or camera was used for a fake call.</p>
         <Link className="btn btn-green" href="/calls">Back to Calls</Link>
-        <Link className="btn btn-light" href="/login">Sign in</Link>
+        {authError ? <Link className="btn btn-light" href="/login">Sign in</Link> : null}
+        {/Could not find|own account/.test(error) ? <Link className="btn btn-light" href="/new-chat">Find a user</Link> : null}
       </div>
     );
   }

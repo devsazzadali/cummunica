@@ -14,5 +14,5 @@ export default function CallPage({ searchParams }: { searchParams: { to?: string
   const name = searchParams.to ?? "Unknown";
   const kind = searchParams.kind === "video" ? "video" : "audio";
   const variant = searchParams.variant === "incoming" ? "incoming" : "outgoing";
-  return <AppShell active="Calls" hideHeader hideBottomNav><CallScreen name={name} kind={kind} variant={variant} callee={searchParams.callee} callId={searchParams.callId} /></AppShell>;
+  return <AppShell requireLogin active="Calls" hideHeader hideBottomNav><CallScreen name={name} kind={kind} variant={variant} callee={searchParams.callee} callId={searchParams.callId} /></AppShell>;
 }

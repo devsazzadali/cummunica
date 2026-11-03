@@ -20,7 +20,8 @@ export function handleError(err: unknown): NextResponse {
       { status: 409 },
     );
   }
-  return NextResponse.json({ error: "internal_error", message: "internal error" }, { status: 500 });
+  try { console.error("internal_error", err); } catch {}
+  return NextResponse.json({ error: "internal_error", message: "internal error — please try again, and tell us which page and action failed if it keeps happening" }, { status: 500 });
 }
 
 export async function readJson(request: Request): Promise<Record<string, unknown>> {

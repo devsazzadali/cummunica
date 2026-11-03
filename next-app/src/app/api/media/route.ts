@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 import { promises as fs } from "fs";
 import path from "path";
 import { requireAuth } from "@/lib/auth";
-import { badRequest } from "@/lib/errors";
+import { ApiError, badRequest } from "@/lib/errors";
 import { handleError, json } from "@/lib/http";
 import { safeUploadFilename, sniffUpload, validateUpload } from "@/lib/media";
 
@@ -30,11 +30,11 @@ export async function POST(request: Request) {
     sniffUpload(new Uint8Array(buf), file.type);
     const name = safeUploadFilename(file.name, ext);
     const dir = path.join(process.cwd(), "public", "uploads");
-    await fs.mkdir(dir, { recursive: true });
+    try { await fs.mkdir(dir, { recursive: true }); } catch { throw new ApiError(503, "storage_unavailable", "media storage is not available on this host — the app will store small files in its own database instead"); }
     // Defence in depth: the joined path must stay inside uploads/.
     const dest = path.join(dir, name);
     if (!dest.startsWith(dir + path.sep)) throw badRequest("invalid filename");
-    await fs.writeFile(dest, buf);
+    try { await fs.writeFile(dest, buf); } catch { throw new ApiError(503, "storage_unavailable", "media storage is not available on this host — the app will store small files in its own database instead"); }
     return json({ url: `/uploads/${name}`, mime: file.type, size: file.size, kind, storage: "server-local" }, 201);
   } catch (err) {
     return handleError(err);

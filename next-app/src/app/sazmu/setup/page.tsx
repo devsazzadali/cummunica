@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Bot } from "lucide-react";
+import { AppShell } from "@/components/ui";
 import { GIRLFRIEND_PRESETS, BOYFRIEND_DEFAULT } from "@/lib/demo-data";
 export default function SazmuSetupPage(){
  const [role,setRole]=useState<"Boyfriend"|"Girlfriend">("Boyfriend");
@@ -17,7 +18,7 @@ export default function SazmuSetupPage(){
   }catch(err){ setError(err instanceof Error?err.message:"setup failed"); }
  };
  const presets=role==="Boyfriend"?[BOYFRIEND_DEFAULT]:GIRLFRIEND_PRESETS;
- return <main><header className="topbar"><Link className="icon-btn" href="/sazmu" aria-label="Back"><ArrowLeft size={22}/></Link><h1>SAZMU AI Setup</h1></header>
+ return <AppShell requireLogin active="" hideHeader><header className="topbar"><Link className="icon-btn" href="/sazmu" aria-label="Back"><ArrowLeft size={22}/></Link><h1>SAZMU AI Setup</h1></header>
  <div className="wrap"><p><Bot size={22}/> SAZMU AI is always labelled AI — never a real human.</p>
   <p>Role</p><div className="chip-row">{(["Boyfriend","Girlfriend"] as const).map(r=>(<button key={r} type="button" className={role===r?"chip chip-on":"chip"} onClick={()=>{setRole(r);setName(r==="Boyfriend"?BOYFRIEND_DEFAULT:"");}}>{r}</button>))}</div>
   <p>Call name — tap a preset, or type a custom name below</p><div className="chip-row">{presets.map(p=>(<button key={p} type="button" className={name===p?"chip chip-on":"chip"} onClick={()=>setName(p)}>{p}</button>))}</div>
@@ -28,5 +29,5 @@ export default function SazmuSetupPage(){
   <p style={{marginTop:16}}><button type="button" className="btn btn-green btn-full" onClick={save}>Save &amp; open SAZMU AI chat</button></p>
   {error?<><p role="alert">Setup failed: {error} — nothing was saved.</p><p>Live setup did not succeed. Log in and try again — nothing was saved.</p></>:null}
   {saved&&savedReal?<><p>Setup saved to the server. Selected: {role}, call name {custom||name||"(none)"}, tone {tone}, language {lang}.</p><p>Replies are template-only until an LLM provider/key is provided — no generative reply is faked.</p><Link className="btn btn-light btn-full" href="/sazmu">Open SAZMU AI chat</Link></>:null}
- </div></main>;
+ </div></AppShell>;
 }

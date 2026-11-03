@@ -23,8 +23,13 @@ export function validateSendMessage(input: {
     if (input.mediaUrl === undefined || input.mediaUrl === null || input.mediaUrl === "") {
       throw badRequest("media message requires an uploaded file");
     }
-    if (!input.mediaUrl.startsWith("/uploads/")) {
-      throw badRequest("media message must use an uploaded /uploads/ file");
+    const isUpload = input.mediaUrl.startsWith("/uploads/");
+    const isDataUrl = input.mediaUrl.startsWith("data:image/") || input.mediaUrl.startsWith("data:audio/") || input.mediaUrl.startsWith("data:video/");
+    if (!isUpload && !isDataUrl) {
+      throw badRequest("media message must use an uploaded /uploads/ file or a data URL from our own system");
+    }
+    if (isDataUrl && input.mediaUrl.length > 8000000) {
+      throw badRequest("media file is too large for in-app storage (max about 5 MB)");
     }
     const allowed = MEDIA_MIMES_BY_KIND[input.type];
     if (input.mediaMime === undefined || input.mediaMime === null || input.mediaMime === "" || !allowed.includes(input.mediaMime)) {

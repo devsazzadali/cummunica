@@ -21,5 +21,5 @@ export default function ChatsPage(){
   <RealChatList filter={filter} q={q}/>
   <div className="fab-stack"><Link href="/keypad" className="fab fab-secondary" aria-label="Keypad"><Hash size={24}/></Link><Link href="/new-chat" className="fab" aria-label="New chat"><Plus size={24}/></Link></div></div>;
  const detail=<div className="pane-placeholder"><h2>Select a chat</h2><p>Select a chat on the left to open it here (desktop two-pane view).</p><p>On mobile, chats open as a single full screen.</p></div>;
- return <AppShell active="Chats" hideHeader><TwoPane list={list} detail={detail}/></AppShell>;
+ return <AppShell requireLogin active="Chats" hideHeader><TwoPane list={list} detail={detail}/></AppShell>;
 }
